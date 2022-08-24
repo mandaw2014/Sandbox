@@ -44,6 +44,8 @@ class Player(Entity):
         self.rope_pivot = Entity()
         self.rope = Entity(model = Mesh(vertices = [self.world_position, self.rope_pivot.world_position], mode = "line", thickness = 15, colors = [color.hex("#ff8b00")]), texture = "rope.png", enabled = False)
         self.can_rope = False
+        self.rope_length = 100
+        self.max_rope_length = False
 
     def jump(self):
         self.jumping = True
@@ -78,36 +80,44 @@ class Player(Entity):
 
         # Rope
         if self.can_rope:
-            if held_keys["left mouse"]:
+            if held_keys["right mouse"]:
                 if distance(self.position, self.rope_pivot.position) > 5:
-                    self.position += ((self.rope_pivot.position - self.position).normalized() * 20 * time.dt)
+                    if distance(self.position, self.rope_pivot.position) < self.rope_length:
+                        self.position += ((self.rope_pivot.position - self.position).normalized() * 20 * time.dt)
+                        self.velocity_z += 10 * time.dt  
                     self.rope.model.vertices.pop(0)
-                    self.rope.model.vertices = [self.world_position + (0, 1, 0) + self.forward, self.rope_pivot.world_position]
+                    self.rope.model.vertices = [self.world_position + (0, 1, 0) + (self.forward * 2), self.rope_pivot.world_position]
                     self.rope.model.generate()
                     self.rope.enable()
-                    if self.y < self.rope_pivot.y + 10:
+                    if self.y < self.rope_pivot.y:
                         self.velocity_y += 40 * time.dt
                     else:
-                        self.velocity_y -= 50 * time.dt
-                    self.velocity_z += 10 * time.dt
+                        self.velocity_y -= 60 * time.dt
                 else:
                     self.rope.disable()
+                if distance(self.position, self.rope_pivot.position) > self.rope_length:
+                    self.max_rope_length = True
+                    invoke(setattr, self, "max_rope_length", False, delay = 2)
+                if self.max_rope_length:
+                    self.position += ((self.rope_pivot.position - self.position).normalized() * 25 * time.dt)
+                    self.velocity_z -= 5 * time.dt
+                    self.velocity_y -= 100 * time.dt
 
         # Velocity / Momentum
         if held_keys["w"]:
-            self.velocity_z += 10 * time.dt if y_ray.distance < 5 else 2 * time.dt
+            self.velocity_z += 10 * time.dt if y_ray.distance < 5 and not self.can_rope else 2 * time.dt
         else:
             self.velocity_z = lerp(self.velocity_z, 0 if y_ray.distance < 5 else 1, time.dt * 2)
         if held_keys["a"]:
-            self.velocity_x += 10 * time.dt if y_ray.distance < 5 else 5 * time.dt
+            self.velocity_x += 10 * time.dt if y_ray.distance < 5 and not self.can_rope else 5 * time.dt
         else:
             self.velocity_x = lerp(self.velocity_x, 0 if y_ray.distance < 5 else 1, time.dt * 2)
         if held_keys["s"]:
-            self.velocity_z -= 10 * time.dt if y_ray.distance < 5 else 2 * time.dt
+            self.velocity_z -= 10 * time.dt if y_ray.distance < 5 and not self.can_rope else 2 * time.dt
         else:
             self.velocity_z = lerp(self.velocity_z, 0 if y_ray.distance < 5 else 1, time.dt * 2)
         if held_keys["d"]:
-            self.velocity_x -= 10 * time.dt if y_ray.distance < 5 else 5 * time.dt
+            self.velocity_x -= 10 * time.dt if y_ray.distance < 5 and not self.can_rope else 5 * time.dt
         else:
             self.velocity_x = lerp(self.velocity_x, 0 if y_ray.distance < 5 else -1, time.dt * 2)
 
@@ -146,13 +156,14 @@ class Player(Entity):
         if key == "space":
             if self.jump_count < 1:
                 self.jump()
-        if key == "left mouse down":
-            rope_ray = raycast(camera.world_position, camera.forward, distance = 250, traverse_target = self.level, ignore = [self, camera, ])
+        if key == "right mouse down":
+            rope_ray = raycast(camera.world_position, camera.forward, distance = 100, traverse_target = self.level, ignore = [self, camera, ])
             if rope_ray.hit:
                 self.can_rope = True
                 rope_point = rope_ray.world_point
+                self.rope_entity = rope_ray.entity
                 self.rope_pivot.position = rope_point
-        elif key == "left mouse up":
+        elif key == "right mouse up":
             self.rope_pivot.position = self.position
             if self.can_rope:
                 self.rope.disable()
