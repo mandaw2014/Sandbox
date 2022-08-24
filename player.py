@@ -89,26 +89,27 @@ class Player(Entity):
                         self.velocity_y += 40 * time.dt
                     else:
                         self.velocity_y -= 50 * time.dt
+                    self.velocity_z += 10 * time.dt
                 else:
                     self.rope.disable()
 
         # Velocity / Momentum
         if held_keys["w"]:
-            self.velocity_z += 10 * time.dt if y_ray.hit else 2 * time.dt
+            self.velocity_z += 10 * time.dt if y_ray.distance < 5 else 2 * time.dt
         else:
-            self.velocity_z = lerp(self.velocity_z, 0 if y_ray.hit else 1, time.dt * 2)
+            self.velocity_z = lerp(self.velocity_z, 0 if y_ray.distance < 5 else 1, time.dt * 2)
         if held_keys["a"]:
-            self.velocity_x += 10 * time.dt if y_ray.hit else 2 * time.dt
+            self.velocity_x += 10 * time.dt if y_ray.distance < 5 else 5 * time.dt
         else:
-            self.velocity_x = lerp(self.velocity_x, 0 if y_ray.hit else 1, time.dt * 2)
+            self.velocity_x = lerp(self.velocity_x, 0 if y_ray.distance < 5 else 1, time.dt * 2)
         if held_keys["s"]:
-            self.velocity_z -= 10 * time.dt if y_ray.hit else 2 * time.dt
+            self.velocity_z -= 10 * time.dt if y_ray.distance < 5 else 2 * time.dt
         else:
-            self.velocity_z = lerp(self.velocity_z, 0 if y_ray.hit else 1, time.dt * 2)
+            self.velocity_z = lerp(self.velocity_z, 0 if y_ray.distance < 5 else 1, time.dt * 2)
         if held_keys["d"]:
-            self.velocity_x -= 10 * time.dt if y_ray.hit else 2 * time.dt
+            self.velocity_x -= 10 * time.dt if y_ray.distance < 5 else 5 * time.dt
         else:
-            self.velocity_x = lerp(self.velocity_x, 0 if y_ray.hit else 1, time.dt * 2)
+            self.velocity_x = lerp(self.velocity_x, 0 if y_ray.distance < 5 else -1, time.dt * 2)
 
         # Movement
         movementX = (self.forward[0] * self.velocity_z + 

@@ -27,13 +27,13 @@ ambient = AmbientLight(color = Vec4(0.5, 0.55, 0.66, 0) * 1.5)
 
 render.setShaderAuto()
 
-Sky()
+Sky(texture = "sky")
 
 def update():
     if held_keys["escape"]:
         mouse.locked = not mouse.locked
 
     if held_keys["g"]:
-        player.position = (5, 20, 0)
+        player.position = (10, 20, 0)
 
 app.run()
