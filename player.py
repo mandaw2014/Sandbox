@@ -3,7 +3,7 @@ from ursina import *
 sign = lambda x: -1 if x < 0 else (1 if x > 0 else 0)
 
 class Player(Entity):
-    def __init__(self, position, level, speed = 5, jump_height = 12):
+    def __init__(self, position, level, speed = 5, jump_height = 14):
         super().__init__(
             model = "cube", 
             position = position,
@@ -17,7 +17,7 @@ class Player(Entity):
         camera.parent = self
         camera.position = (0, 2, 0)
         camera.rotation = (0, 0, 0)
-        camera.fov = 70
+        camera.fov = 90
 
         # Crosshair
         self.crosshair = Entity(model = "quad", color = color.black, parent = camera, rotation_z = 45, position = (0, 0, 1), scale = 0.008)
@@ -42,7 +42,7 @@ class Player(Entity):
 
         # Rope
         self.rope_pivot = Entity()
-        self.rope = Entity(model = Mesh(vertices = [self.world_position, self.rope_pivot.world_position], mode = "line", thickness = 10), texture = "rope.png", color = color.orange, enabled = False)
+        self.rope = Entity(model = Mesh(vertices = [self.world_position, self.rope_pivot.world_position], mode = "line", thickness = 15, colors = [color.hex("#ff8b00")]), texture = "rope.png", enabled = False)
         self.can_rope = False
 
     def jump(self):
@@ -71,7 +71,7 @@ class Player(Entity):
                 self.jumping = False
         else:
             if not self.can_rope:
-                self.velocity_y -= 30 * time.dt
+                self.velocity_y -= 40 * time.dt
                 self.grounded = False
 
         self.y += movementY * 50 * time.dt
@@ -79,18 +79,16 @@ class Player(Entity):
         # Rope
         if self.can_rope:
             if held_keys["left mouse"]:
-                if distance(self.position, self.rope_pivot.position) > 10:
+                if distance(self.position, self.rope_pivot.position) > 5:
                     self.position += ((self.rope_pivot.position - self.position).normalized() * 20 * time.dt)
                     self.rope.model.vertices.pop(0)
                     self.rope.model.vertices = [self.world_position + (0, 1, 0) + self.forward, self.rope_pivot.world_position]
                     self.rope.model.generate()
                     self.rope.enable()
                     if self.y < self.rope_pivot.y + 10:
-                        self.velocity_y += 60 * time.dt
+                        self.velocity_y += 40 * time.dt
                     else:
                         self.velocity_y -= 50 * time.dt
-                    self.velocity_x += 5 * time.dt
-                    self.velocity_z += 5 * time.dt
                 else:
                     self.rope.disable()
 
@@ -148,7 +146,7 @@ class Player(Entity):
             if self.jump_count < 1:
                 self.jump()
         if key == "left mouse down":
-            rope_ray = raycast(camera.world_position, camera.forward, distance = 250, ignore = [self, camera, self.level, ])
+            rope_ray = raycast(camera.world_position, camera.forward, distance = 250, traverse_target = self.level, ignore = [self, camera, ])
             if rope_ray.hit:
                 self.can_rope = True
                 rope_point = rope_ray.world_point
@@ -157,5 +155,5 @@ class Player(Entity):
             self.rope_pivot.position = self.position
             if self.can_rope:
                 self.rope.disable()
-                # self.velocity_y = 40
+                self.velocity_y += 10
             self.can_rope = False
