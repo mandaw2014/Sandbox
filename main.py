@@ -1,8 +1,14 @@
 from ursina import *
 from direct.stdpy import thread
+
 from player import Player
-from sun import SunLight
 from enemy import Enemy
+
+from levels import FlatLevel, RopeLevel
+
+from sun import SunLight
+
+Text.default_font = "./assets/Roboto.ttf"
 
 if sys.platform != "darwin":
     window.fullscreen = True
@@ -22,7 +28,7 @@ window.exit_button.disable()
 # Starting new thread for assets
 def load_assets():
     models_to_load = [
-        "level", "particle", "particles", "enemy", "gun", "bullet"
+        "flatlevel", "ropelevel", "particle", "particles", "enemy", "gun", "bullet"
     ]
 
     textures_to_load = [
@@ -40,9 +46,13 @@ try:
 except Exception as e:
     print("error starting thread", e)
 
-level = Entity(model = "level.obj", texture = "level.png", scale = (30, 30, 30), collider = "mesh")
+player = Player((-47, 100, -94)) # Rope: (-61, 100, 0)
 
-player = Player((-61, 100, 0), level)
+flatlevel = FlatLevel(player, enabled = True)
+ropelevel = RopeLevel(player, enabled = False)
+
+level = flatlevel
+player.level = level
 
 # Enemy
 for enemy in range(5):
@@ -58,7 +68,14 @@ render.setShaderAuto()
 Sky(texture = "sky")
 
 def update():
+    # print(player.position)
     if held_keys["g"]:
         player.position = (-61, 25, 0)
+        player.ded_text.disable()
+        player.health = 10
+        player.healthbar.value = player.health
+        player.velocity_x = 0
+        player.velocity_y = 0
+        player.velocity_z = 0
 
 app.run()

@@ -9,7 +9,7 @@ from particles import Particles
 sign = lambda x: -1 if x < 0 else (1 if x > 0 else 0)
 
 class Player(Entity):
-    def __init__(self, position, level, speed = 5, jump_height = 14):
+    def __init__(self, position, speed = 5, jump_height = 14):
         super().__init__(
             model = "cube", 
             position = position,
@@ -23,7 +23,7 @@ class Player(Entity):
         camera.parent = self
         camera.position = (0, 2, 0)
         camera.rotation = (0, 0, 0)
-        camera.fov = 90
+        camera.fov = 100
 
         # Crosshair
         self.crosshair = Entity(model = "quad", color = color.black, parent = camera, rotation_z = 45, position = (0, 0, 1), scale = 1, z = 100, always_on_top = True)
@@ -49,7 +49,7 @@ class Player(Entity):
         self.mouse_sensitivity = 80
 
         # Level
-        self.level = level
+        self.level = None
 
         # Gun
         self.gun = Gun(self)
@@ -63,6 +63,12 @@ class Player(Entity):
         self.max_rope_length = False
         self.below_rope = False
 
+        # Sliding
+        self.sliding = False
+        self.slope = False
+        self.slide_pivot = Entity()
+        self.set_slide_rotation = False
+
         # Enemies
         self.enemies = []
 
@@ -72,15 +78,24 @@ class Player(Entity):
         self.health = 10
         self.ded_text = Text("ded", color = color.black, origin = 0, enabled = False)
 
+        # Score
+        self.score = 0
+        self.score_text = Text(text = str(self.score), origin = (0, 0), size = 0.05, scale = (1, 1), position = window.top_right - (0.1, 0.1))
+        self.score_text.text = str(self.score)
+
     def jump(self):
         self.jumping = True
-        self.velocity_y = self.jump_height
+        self.velocity_y += self.jump_height
         self.jump_count += 1
 
     def update(self):
         movementY = self.velocity_y * time.dt
+        self.velocity_y = clamp(self.velocity_y, -100, 100)
 
         direction = (0, sign(movementY), 0)
+
+        camera.fov += self.velocity_z * time.dt
+        camera.fov = clamp(camera.fov, 70, 110)
 
         # Main raycast for collision
         y_ray = raycast(origin = self.world_position, direction = self.down, traverse_target = self.level, ignore = [self, ])
@@ -101,12 +116,35 @@ class Player(Entity):
                 self.velocity_y -= 40 * time.dt
                 self.grounded = False
 
+        # Sliding
+        if self.sliding:
+            self.animate_scale((1.3, 0.5, 1.3), duration = 0.5)
+            slide_ray = raycast(self.world_position + self.forward, self.forward, distance = 8, traverse_target = self.level, ignore = [self, self.gun, ])
+            if not slide_ray.hit:
+                if hasattr(y_ray.world_point, "y"):
+                    if y_ray.distance <= 2 and self.velocity_y <= 0.1:
+                        self.y = y_ray.world_point.y + 0.7
+
+                    self.velocity_z -= y_ray.world_normal[2] * 10 * time.dt
+            elif slide_ray.hit:
+                self.velocity_z = -10
+                if self.velocity_z <= -1:
+                    self.velocity_z = -1
+                if hasattr(y_ray.world_point, "y"):
+                    self.y = y_ray.world_point.y + 1.4
+            
+            if self.set_slide_rotation:
+                self.slide_pivot.rotation = camera.world_rotation
+                self.set_slide_rotation = False
+        else:
+            self.animate_scale((1.3, 1, 1.3), duration = 0.5)
+
         self.y += movementY * 50 * time.dt
 
         # Rope
         if self.can_rope:
             if held_keys["right mouse"]:
-                if distance(self.position, self.rope_pivot.position) > 5:
+                if distance(self.position, self.rope_pivot.position) > 10:
                     if distance(self.position, self.rope_pivot.position) < self.rope_length:
                         self.position += ((self.rope_pivot.position - self.position).normalized() * 20 * time.dt)
                         self.velocity_z += 2 * time.dt  
@@ -124,7 +162,7 @@ class Player(Entity):
                         invoke(setattr, self, "below_rope", False, delay = 5)
 
                     if self.below_rope:
-                        self.velocity_y += 50 * time.dt
+                        self.velocity_y += -self.velocity_y * time.dt
                 else:
                     self.rope.disable()
                 if distance(self.position, self.rope_pivot.position) > self.rope_length:
@@ -136,34 +174,36 @@ class Player(Entity):
                     self.velocity_y -= 80 * time.dt
 
         # Velocity / Momentum
-        if held_keys["w"]:
-            self.velocity_z += 10 * time.dt if y_ray.distance < 5 and not self.can_rope else 5 * time.dt
-        else:
-            self.velocity_z = lerp(self.velocity_z, 0 if y_ray.distance < 5 else 1, time.dt * 2)
-        if held_keys["a"]:
-            self.velocity_x += 10 * time.dt if y_ray.distance < 5 and not self.can_rope else 5 * time.dt
-        else:
-            self.velocity_x = lerp(self.velocity_x, 0 if y_ray.distance < 5 else 1, time.dt * 2)
-        if held_keys["s"]:
-            self.velocity_z -= 10 * time.dt if y_ray.distance < 5 and not self.can_rope else 5 * time.dt
-        else:
-            self.velocity_z = lerp(self.velocity_z, 0 if y_ray.distance < 5 else 1, time.dt * 2)
-        if held_keys["d"]:
-            self.velocity_x -= 10 * time.dt if y_ray.distance < 5 and not self.can_rope else 5 * time.dt
-        else:
-            self.velocity_x = lerp(self.velocity_x, 0 if y_ray.distance < 5 else -1, time.dt * 2)
+        if not self.sliding:
+            if held_keys["w"]:
+                self.velocity_z += 10 * time.dt if y_ray.distance < 5 and not self.can_rope else 5 * time.dt
+            else:
+                self.velocity_z = lerp(self.velocity_z, 0 if y_ray.distance < 5 else 1, time.dt * 2)
+            if held_keys["a"]:
+                self.velocity_x += 10 * time.dt if y_ray.distance < 5 and not self.can_rope else 5 * time.dt
+            else:
+                self.velocity_x = lerp(self.velocity_x, 0 if y_ray.distance < 5 else 1, time.dt * 2)
+            if held_keys["s"]:
+                self.velocity_z -= 10 * time.dt if y_ray.distance < 5 and not self.can_rope else 5 * time.dt
+            else:
+                self.velocity_z = lerp(self.velocity_z, 0 if y_ray.distance < 5 else 1, time.dt * 2)
+            if held_keys["d"]:
+                self.velocity_x -= 10 * time.dt if y_ray.distance < 5 and not self.can_rope else 5 * time.dt
+            else:
+                self.velocity_x = lerp(self.velocity_x, 0 if y_ray.distance < 5 else -1, time.dt * 2)
 
         # Movement
         if y_ray.distance <= 5 or self.can_rope:
-            self.movementX = (self.forward[0] * self.velocity_z + 
-                self.left[0] * self.velocity_x + 
-                self.back[0] * -self.velocity_z + 
-                self.right[0] * -self.velocity_x) * self.speed * time.dt
+            if not self.sliding:
+                self.movementX = (self.forward[0] * self.velocity_z + 
+                    self.left[0] * self.velocity_x + 
+                    self.back[0] * -self.velocity_z + 
+                    self.right[0] * -self.velocity_x) * self.speed * time.dt
 
-            self.movementZ = (self.forward[2] * self.velocity_z + 
-                self.left[2] * self.velocity_x + 
-                self.back[2] * -self.velocity_z + 
-                self.right[2] * -self.velocity_x) * self.speed * time.dt
+                self.movementZ = (self.forward[2] * self.velocity_z + 
+                    self.left[2] * self.velocity_x + 
+                    self.back[2] * -self.velocity_z + 
+                    self.right[2] * -self.velocity_x) * self.speed * time.dt
         else:
             self.movementX += (self.forward[0] * held_keys["w"] / 5 + 
                 self.left[0] * held_keys["a"] + 
@@ -174,6 +214,17 @@ class Player(Entity):
                 self.left[2] * held_keys["a"] + 
                 self.back[2] * held_keys["s"] + 
                 self.right[2] * held_keys["d"]) / 1.4 * time.dt
+
+        if self.sliding:
+            self.movementX += ((self.slide_pivot.forward[0] * self.velocity_z) +
+                self.left[0] * held_keys["a"] * 8.6 + 
+                self.back[0] * held_keys["s"] * 8.6 + 
+                self.right[0] * held_keys["d"] * 8.6) / 10 * time.dt
+
+            self.movementZ += ((self.slide_pivot.forward[2] * self.velocity_z) + 
+                self.left[2] * held_keys["a"] * 8.6 + 
+                self.back[2] * held_keys["s"] * 8.6 + 
+                self.right[2] * held_keys["d"] * 8.6) / 10 * time.dt
 
         # Collision Detection
         if self.movementX != 0:
@@ -218,6 +269,16 @@ class Player(Entity):
                 self.rope.disable()
                 self.velocity_y += 10
             self.can_rope = False
+        
+        if key == "left shift":
+            self.sliding = True
+            self.set_slide_rotation = True
+        elif key == "left shift up":
+            self.sliding = False
+
+    def shot_enemy(self):
+        self.score += 1
+        self.score_text.text = str(self.score)
 
 class Gun(Entity):
     def __init__(self, player):
@@ -265,7 +326,7 @@ class Gun(Entity):
         invoke(setattr, self, "shooting", False, delay = 0.3)
 
     def input(self, key):
-        if key == "left mouse down" and self.can_shoot:
+        if key == "left mouse" and self.can_shoot:
             self.shoot()
 
 class Bullet(Entity):
@@ -312,11 +373,13 @@ class Bullet(Entity):
                                 p = Particles(e.world_position, Vec3(random.random(), random.randrange(-10, 10, 1) / 10, random.random()), spray_amount = 10, model = "particles", texture = "destroyed")
                             e.reset_pos()
                             e.health = 2
+                            self.gun.player.shot_enemy()
                 destroy(self)
 
             destroy(self, delay = 3)
         else:
             bullet_ray = boxcast(self.world_position, self.forward, distance = 3, traverse_target = self.gun.player, ignore = [self, self.gun], thickness = (2, 2))
+            level_ray = boxcast(self.world_position, self.forward, distance = 3, traverse_target = self.gun.player.level, ignore = [self, self.gun], thickness = (2, 2))
             if bullet_ray.hit:
                 if not self.hit_player:
                     self.gun.player.health -= 1
@@ -324,6 +387,8 @@ class Bullet(Entity):
                     self.hit_player = True
                 if self.gun.player.health <= 0:
                     self.gun.player.ded_text.enable()
+                destroy(self)
+            if level_ray.hit:
                 destroy(self)
             destroy(self, delay = 2)
 
