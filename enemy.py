@@ -3,7 +3,7 @@ from particles import Particles
 from player import Bullet
 
 class Enemy(Entity):
-    def __init__(self, player, move_speed = 15, position = (0, 0, 0)):
+    def __init__(self, player, move_speed = 20, position = (0, 0, 0)):
         super().__init__(
             model = "enemy.obj",
             texture = "level.png",
@@ -29,9 +29,11 @@ class Enemy(Entity):
         self.particle_t = 0
         self.particle_amount = 0.2
 
+        self.random = Vec3(random.random()) * 5
+
     def update(self):
         if distance(self, self.player) > 20:
-            self.position += (self.player.position - self.position).normalized() * self.move_speed * time.dt
+            self.position += ((self.player.position + self.random) - self.position).normalized() * self.move_speed * time.dt
 
         self.look_at(self.player)
         self.rotation_z = 0
@@ -54,4 +56,4 @@ class Enemy(Entity):
             self.particles2 = Particles(self.thruster2.world_position, Vec3(random.random(), -random.random(), random.random()), 10, texture = "jetpack")
 
     def reset_pos(self):
-        self.position = Vec3(random.randint(-200, 200), random.randint(0, 50), random.randint(-200, 200))
+        self.position = Vec3(random.randint(-100, 300), random.randint(0, 50), random.randint(-100, 300))

@@ -90,7 +90,7 @@ class Player(Entity):
 
     def update(self):
         movementY = self.velocity_y * time.dt
-        self.velocity_y = clamp(self.velocity_y, -100, 100)
+        self.velocity_y = clamp(self.velocity_y, -70, 100)
 
         direction = (0, sign(movementY), 0)
 
@@ -104,6 +104,7 @@ class Player(Entity):
             if not self.grounded:
                 self.velocity_y = 0
                 self.grounded = True
+
             # Check if hitting a wall or steep slope
             if y_ray.world_normal.y > 0.7 and y_ray.world_point.y - self.world_y < 0.5:
                 # Set the y value to the ground's y value
@@ -125,7 +126,10 @@ class Player(Entity):
                     if y_ray.distance <= 2 and self.velocity_y <= 0.1:
                         self.y = y_ray.world_point.y + 0.7
 
-                    self.velocity_z -= y_ray.world_normal[2] * 10 * time.dt
+                    if y_ray.world_normal[2] * 10 < 0:
+                        self.velocity_z -= y_ray.world_normal[2] * 10 * time.dt
+                    if y_ray.world_normal[2] * 10 > 0:
+                        self.velocity_z += y_ray.world_normal[2] * 10 * time.dt
             elif slide_ray.hit:
                 self.velocity_z = -10
                 if self.velocity_z <= -1:
@@ -149,7 +153,7 @@ class Player(Entity):
                         self.position += ((self.rope_pivot.position - self.position).normalized() * 20 * time.dt)
                         self.velocity_z += 2 * time.dt  
                     self.rope.model.vertices.pop(0)
-                    self.rope.model.vertices = [self.position + (0, 1, 0) + (self.forward * 2) + self.left, self.rope_pivot.world_position]
+                    self.rope.model.vertices = [self.position - (0, 5, 0) + (self.forward * 4) + (self.left * 2), self.rope_pivot.world_position]
                     self.rope.model.generate()
                     self.rope.enable()
                     if self.y < self.rope_pivot.y:
@@ -162,7 +166,7 @@ class Player(Entity):
                         invoke(setattr, self, "below_rope", False, delay = 5)
 
                     if self.below_rope:
-                        self.velocity_y += -self.velocity_y * time.dt
+                        self.velocity_y += 50 * time.dt
                 else:
                     self.rope.disable()
                 if distance(self.position, self.rope_pivot.position) > self.rope_length:
@@ -178,19 +182,19 @@ class Player(Entity):
             if held_keys["w"]:
                 self.velocity_z += 10 * time.dt if y_ray.distance < 5 and not self.can_rope else 5 * time.dt
             else:
-                self.velocity_z = lerp(self.velocity_z, 0 if y_ray.distance < 5 else 1, time.dt * 2)
+                self.velocity_z = lerp(self.velocity_z, 0 if y_ray.distance < 5 else 1, time.dt * 3)
             if held_keys["a"]:
                 self.velocity_x += 10 * time.dt if y_ray.distance < 5 and not self.can_rope else 5 * time.dt
             else:
-                self.velocity_x = lerp(self.velocity_x, 0 if y_ray.distance < 5 else 1, time.dt * 2)
+                self.velocity_x = lerp(self.velocity_x, 0 if y_ray.distance < 5 else 1, time.dt * 3)
             if held_keys["s"]:
                 self.velocity_z -= 10 * time.dt if y_ray.distance < 5 and not self.can_rope else 5 * time.dt
             else:
-                self.velocity_z = lerp(self.velocity_z, 0 if y_ray.distance < 5 else 1, time.dt * 2)
+                self.velocity_z = lerp(self.velocity_z, 0 if y_ray.distance < 5 else 1, time.dt * 3)
             if held_keys["d"]:
                 self.velocity_x -= 10 * time.dt if y_ray.distance < 5 and not self.can_rope else 5 * time.dt
             else:
-                self.velocity_x = lerp(self.velocity_x, 0 if y_ray.distance < 5 else -1, time.dt * 2)
+                self.velocity_x = lerp(self.velocity_x, 0 if y_ray.distance < 5 else -1, time.dt * 3)
 
         # Movement
         if y_ray.distance <= 5 or self.can_rope:
@@ -218,12 +222,10 @@ class Player(Entity):
         if self.sliding:
             self.movementX += ((self.slide_pivot.forward[0] * self.velocity_z) +
                 self.left[0] * held_keys["a"] * 8.6 + 
-                self.back[0] * held_keys["s"] * 8.6 + 
                 self.right[0] * held_keys["d"] * 8.6) / 10 * time.dt
 
             self.movementZ += ((self.slide_pivot.forward[2] * self.velocity_z) + 
                 self.left[2] * held_keys["a"] * 8.6 + 
-                self.back[2] * held_keys["s"] * 8.6 + 
                 self.right[2] * held_keys["d"] * 8.6) / 10 * time.dt
 
         # Collision Detection
@@ -244,7 +246,7 @@ class Player(Entity):
         # Looking around
         camera.rotation_x -= mouse.velocity[1] * self.mouse_sensitivity * 30 * time.dt
         self.rotation_y += mouse.velocity[0] * self.mouse_sensitivity * 30 * time.dt
-        camera.rotation_x = min(max(-80, camera.rotation_x), 80)
+        camera.rotation_x = min(max(-90, camera.rotation_x), 90)
 
         # Springs
         gun_movement = self.spring.update(time.dt)
@@ -280,6 +282,15 @@ class Player(Entity):
         self.score += 1
         self.score_text.text = str(self.score)
 
+    def reset(self):
+        self.position = (-47, 50, -94)
+        self.velocity_x = 0
+        self.velocity_y = 0
+        self.velocity_z = 0
+        self.health = 10
+        for enemy in self.enemies:
+            enemy.reset_pos()
+
 class Gun(Entity):
     def __init__(self, player):
         super().__init__(
@@ -297,8 +308,6 @@ class Gun(Entity):
         # Cooldown
         self.cooldown_t = 0
         self.cooldown_length = 0.3
-
-        self.shooting = False
         self.can_shoot = True
 
     def update(self):
@@ -322,11 +331,9 @@ class Gun(Entity):
         self.animate_rotation((0, 0, 0), 0.4, delay = 0.12, curve = curve.linear)
 
         self.can_shoot = False
-        self.shooting = True
-        invoke(setattr, self, "shooting", False, delay = 0.3)
 
     def input(self, key):
-        if key == "left mouse" and self.can_shoot:
+        if key == "left mouse down":
             self.shoot()
 
 class Bullet(Entity):
@@ -378,9 +385,8 @@ class Bullet(Entity):
 
             destroy(self, delay = 3)
         else:
-            bullet_ray = boxcast(self.world_position, self.forward, distance = 3, traverse_target = self.gun.player, ignore = [self, self.gun], thickness = (2, 2))
             level_ray = boxcast(self.world_position, self.forward, distance = 3, traverse_target = self.gun.player.level, ignore = [self, self.gun], thickness = (2, 2))
-            if bullet_ray.hit:
+            if distance(self, self.gun.player) <= 3:
                 if not self.hit_player:
                     self.gun.player.health -= 1
                     self.gun.player.healthbar.value = self.gun.player.health

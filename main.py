@@ -4,6 +4,8 @@ from direct.stdpy import thread
 from player import Player
 from enemy import Enemy
 
+from mainmenu import MainMenu
+
 from levels import FlatLevel, RopeLevel
 
 from sun import SunLight
@@ -46,7 +48,8 @@ try:
 except Exception as e:
     print("error starting thread", e)
 
-player = Player((-47, 100, -94)) # Rope: (-61, 100, 0)
+player = Player((-47, 50, -94)) # Rope: (-61, 100, 0)
+player.disable()
 
 flatlevel = FlatLevel(player, enabled = True)
 ropelevel = RopeLevel(player, enabled = False)
@@ -57,7 +60,10 @@ player.level = level
 # Enemy
 for enemy in range(5):
     e = Enemy(player, position = Vec3(random.randint(-50, 50)))
+    e.disable()
     player.enemies.append(e)
+
+mainmenu = MainMenu(player)
 
 # Lighting + shadows
 sun = SunLight(direction = (-0.7, -0.9, 0.5), resolution = 3072, player = player)
@@ -68,7 +74,7 @@ render.setShaderAuto()
 Sky(texture = "sky")
 
 def update():
-    # print(player.position)
+    print(player.position)
     if held_keys["g"]:
         player.position = (-61, 25, 0)
         player.ded_text.disable()
