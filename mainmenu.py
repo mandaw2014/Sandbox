@@ -1,6 +1,7 @@
 from ursina import *
 
 colourH = color.rgba(18, 152, 255, 180)
+highlighted = lambda button: button.color == colourH
 
 class MainMenu(Entity):
     def __init__(self, player):
@@ -45,7 +46,13 @@ class MainMenu(Entity):
         self.shop_button = Button(text = "Shop", color = color.rgba(0, 0, 0, 0.7), highlight_color = color.rgba(0, 0, 0, 0.7), scale_y = 0.1, scale_x = 0.3, y = -0.07, parent = self.mainmenu)
         self.quit_button = Button(text = "Quit", color = color.rgba(0, 0, 0, 0.7), highlight_color = color.rgba(0, 0, 0, 0.7), scale_y = 0.1, scale_x = 0.3, y = -0.19, parent = self.mainmenu)
 
-        invoke(setattr, self.start_button, "color", colourH, delay = 0.1)
+        invoke(setattr, self.start_button, "color", colourH, delay = 0.5)
+
+        # Endscreen
+        retry_text = Text("Retry", scale = 4, line_height = 2, x = 0, origin = 0, y = 0.1, z = -100, parent = self.end_screen)
+        press_space = Text("Press Space", scale = 2, line_height = 2, x = 0, origin = 0, y = 0, z = -100, parent = self.end_screen)
+        camera.overlay.parent = self.end_screen
+        camera.overlay.color = color.rgba(220, 0, 0, 100)
 
         # Shop Menu
         self.test = Text("test", parent = self.shop_menu, origin = 0)
@@ -56,6 +63,12 @@ class MainMenu(Entity):
             if self.enable_end_screen:
                 self.end_screen.enable()
                 self.enable_end_screen = False
+                application.time_scale = 0.2
+
+        if held_keys["space"] and not self.enable_end_screen:
+            self.player.reset()
+            self.end_screen.disable()
+            self.enable_end_screen = True
             
     def input(self, key):
         if self.player.health <= 0:
@@ -92,15 +105,15 @@ class MainMenu(Entity):
 
         if key == "enter":
             if self.mainmenu.enabled:
-                if self.start_button.color == colourH:
+                if highlighted(self.start_button):
                     self.start()
-                elif self.shop_button.color == colourH:
+                elif highlighted(self.shop_button):
                     self.shop_menu.enable()
                     self.mainmenu.disable()
-                elif self.quit_button.color == colourH:
+                elif highlighted(self.quit_button):
                     application.quit()
             elif self.shop_menu.enabled:
-                if self.back_shop.color == colourH:
+                if highlighted(self.back_shop):
                     self.shop_menu.disable()
                     self.mainmenu.enable()
 

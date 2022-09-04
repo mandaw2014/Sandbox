@@ -23,13 +23,13 @@ class Enemy(Entity):
 
         # Shooting
         self.cooldown_t = 0
-        self.cooldown_length = 1.5
+        self.cooldown_length = 2
 
         # Particles
         self.particle_t = 0
-        self.particle_amount = 0.2
+        self.particle_amount = 0.4
 
-        self.random = Vec3(random.random()) * 5
+        self.random = Vec3(random.randrange(-10, 10), random.randrange(0, 3), random.randrange(-10, 10))
 
     def update(self):
         if distance(self, self.player) > 20:

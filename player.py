@@ -46,10 +46,16 @@ class Player(Entity):
         self.movementX = 0
         self.movementZ = 0
 
-        self.mouse_sensitivity = 80
+        self.mouse_sensitivity = 50
 
         # Level
         self.level = None
+        
+        # Camera Shake
+        self.can_shake = False
+        self.shake_duration = 0.1
+        self.shake_timer = 0
+        self.shake_divider = 70 # the less, the more camera shake
 
         # Gun
         self.gun = Gun(self)
@@ -73,19 +79,26 @@ class Player(Entity):
         self.enemies = []
 
         # Health
-        self.healthbar = HealthBar(10, bar_color = color.hex("#50acff"), roundness = 0, y = window.bottom_left[1] + 0.1, scale_y = 0.03, scale_x = 0.3)
+        self.healthbar = HealthBar(10, bar_color = color.hex("#ff1e1e"), roundness = 0, y = window.bottom_left[1] + 0.1, scale_y = 0.03, scale_x = 0.3)
         self.healthbar.text_entity.disable()
+        self.dashbar = HealthBar(10, bar_color = color.hex("#50acff"), roundness = 0, position = window.bottom_left + (0.12, 0.05), scale_y = 0.007, scale_x = 0.2)
+        self.dashbar.text_entity.disable()
+        
         self.health = 10
-        self.ded_text = Text("ded", color = color.black, origin = 0, enabled = False)
-
+    
         # Score
         self.score = 0
         self.score_text = Text(text = str(self.score), origin = (0, 0), size = 0.05, scale = (1, 1), position = window.top_right - (0.1, 0.1))
         self.score_text.text = str(self.score)
 
+        # Dash
+        self.dashing = False
+        self.can_dash = True
+        self.shift_count = 0
+
     def jump(self):
         self.jumping = True
-        self.velocity_y += self.jump_height
+        self.velocity_y = self.jump_height
         self.jump_count += 1
 
     def update(self):
@@ -93,9 +106,6 @@ class Player(Entity):
         self.velocity_y = clamp(self.velocity_y, -70, 100)
 
         direction = (0, sign(movementY), 0)
-
-        camera.fov += self.velocity_z * time.dt
-        camera.fov = clamp(camera.fov, 70, 110)
 
         # Main raycast for collision
         y_ray = raycast(origin = self.world_position, direction = self.down, traverse_target = self.level, ignore = [self, ])
@@ -119,17 +129,17 @@ class Player(Entity):
 
         # Sliding
         if self.sliding:
-            self.animate_scale((1.3, 0.5, 1.3), duration = 0.5)
+            camera.y = 0
             slide_ray = raycast(self.world_position + self.forward, self.forward, distance = 8, traverse_target = self.level, ignore = [self, self.gun, ])
             if not slide_ray.hit:
                 if hasattr(y_ray.world_point, "y"):
-                    if y_ray.distance <= 2 and self.velocity_y <= 0.1:
-                        self.y = y_ray.world_point.y + 0.7
+                    if y_ray.distance <= 2:
+                        self.y = y_ray.world_point.y + 1.4
 
-                    if y_ray.world_normal[2] * 10 < 0:
-                        self.velocity_z -= y_ray.world_normal[2] * 10 * time.dt
-                    if y_ray.world_normal[2] * 10 > 0:
-                        self.velocity_z += y_ray.world_normal[2] * 10 * time.dt
+                        if y_ray.world_normal[2] * 10 < 0:
+                            self.velocity_z -= y_ray.world_normal[2] * 10 * time.dt
+                        if y_ray.world_normal[2] * 10 > 0:
+                            self.velocity_z += y_ray.world_normal[2] * 10 * time.dt
             elif slide_ray.hit:
                 self.velocity_z = -10
                 if self.velocity_z <= -1:
@@ -141,7 +151,7 @@ class Player(Entity):
                 self.slide_pivot.rotation = camera.world_rotation
                 self.set_slide_rotation = False
         else:
-            self.animate_scale((1.3, 1, 1.3), duration = 0.5)
+            camera.y = 2
 
         self.y += movementY * 50 * time.dt
 
@@ -177,6 +187,35 @@ class Player(Entity):
                     self.velocity_z -= 5 * time.dt
                     self.velocity_y -= 80 * time.dt
 
+        # Dashing
+        if self.dashing and not self.sliding and not held_keys["right mouse"]:
+            if held_keys["a"]:
+                self.animate_position(self.position + (camera.left * 40), duration = 0.2, curve = curve.in_out_quad)
+            elif held_keys["d"]:
+                self.animate_position(self.position + (camera.right * 40), duration = 0.2, curve = curve.in_out_quad)
+            else:
+                self.animate_position(self.position + (camera.forward * 40), duration = 0.2, curve = curve.in_out_quad)
+            self.dashing = False
+            self.velocity_y = 0
+
+            self.shake_camera(0.3, 100)
+
+            self.movementX = (self.forward[0] * self.velocity_z + 
+                self.left[0] * self.velocity_x + 
+                self.back[0] * -self.velocity_z + 
+                self.right[0] * -self.velocity_x) * self.speed * time.dt
+
+            self.movementZ = (self.forward[2] * self.velocity_z + 
+                self.left[2] * self.velocity_x + 
+                self.back[2] * -self.velocity_z + 
+                self.right[2] * -self.velocity_x) * self.speed * time.dt
+
+            for e in self.enemies:
+                if distance(self, e) <= 3:
+                    e.reset_pos()
+                    for i in range(5):
+                        p = Particles(e.world_position, Vec3(random.random(), random.randrange(-10, 10, 1) / 10, random.random()), spray_amount = 10, model = "particles", texture = "destroyed")
+
         # Velocity / Momentum
         if not self.sliding:
             if held_keys["w"]:
@@ -209,24 +248,24 @@ class Player(Entity):
                     self.back[2] * -self.velocity_z + 
                     self.right[2] * -self.velocity_x) * self.speed * time.dt
         else:
-            self.movementX += (self.forward[0] * held_keys["w"] / 5 + 
+            self.movementX += ((self.forward[0] * held_keys["w"] / 5 + 
                 self.left[0] * held_keys["a"] + 
                 self.back[0] * held_keys["s"] + 
-                self.right[0] * held_keys["d"]) / 1.4 * time.dt
+                self.right[0] * held_keys["d"]) / 1.4) * time.dt
 
-            self.movementZ += (self.forward[2] * held_keys["w"] / 5 + 
+            self.movementZ += ((self.forward[2] * held_keys["w"] / 5 + 
                 self.left[2] * held_keys["a"] + 
                 self.back[2] * held_keys["s"] + 
-                self.right[2] * held_keys["d"]) / 1.4 * time.dt
+                self.right[2] * held_keys["d"]) / 1.4) * time.dt
 
         if self.sliding:
-            self.movementX += ((self.slide_pivot.forward[0] * self.velocity_z) +
-                self.left[0] * held_keys["a"] * 8.6 + 
-                self.right[0] * held_keys["d"] * 8.6) / 10 * time.dt
+            self.movementX += (((self.slide_pivot.forward[0] * self.velocity_z) +
+                self.left[0] * held_keys["a"] * 2 + 
+                self.right[0] * held_keys["d"] * 2) / 10) * time.dt
 
-            self.movementZ += ((self.slide_pivot.forward[2] * self.velocity_z) + 
-                self.left[2] * held_keys["a"] * 8.6 + 
-                self.right[2] * held_keys["d"] * 8.6) / 10 * time.dt
+            self.movementZ += (((self.slide_pivot.forward[2] * self.velocity_z) + 
+                self.left[2] * held_keys["a"] * 2 + 
+                self.right[2] * held_keys["d"] * 2)) / 10 * time.dt
 
         # Collision Detection
         if self.movementX != 0:
@@ -243,15 +282,19 @@ class Player(Entity):
             if z_ray.distance > self.scale_z / 2 + abs(self.movementZ):
                 self.z += self.movementZ
 
-        # Looking around
-        camera.rotation_x -= mouse.velocity[1] * self.mouse_sensitivity * 30 * time.dt
-        self.rotation_y += mouse.velocity[0] * self.mouse_sensitivity * 30 * time.dt
+        # Camera
+        camera.rotation_x -= mouse.velocity[1] * self.mouse_sensitivity
+        self.rotation_y += mouse.velocity[0] * self.mouse_sensitivity
         camera.rotation_x = min(max(-90, camera.rotation_x), 90)
+
+        # Camera Shake
+        if self.can_shake:
+            camera.position = self.prev_camera_pos + Vec3(random.randrange(-10, 10), random.randrange(-10, 10), random.randrange(-10, 10)) / self.shake_divider
 
         # Springs
         gun_movement = self.spring.update(time.dt)
         self.spring.shove(Vec3(mouse.x, mouse.y, 0))
-        self.gun.x = gun_movement.x + 1
+        self.gun.x = gun_movement.x + 0.5
         self.gun.y = gun_movement.y - 0.75
 
     def input(self, key):
@@ -275,6 +318,12 @@ class Player(Entity):
         if key == "left shift":
             self.sliding = True
             self.set_slide_rotation = True
+            self.shift_count += 1
+            if self.shift_count >= 2 and self.dashbar.value >= 9.5:
+                self.dashing = True
+                self.dashbar.value = 0
+                invoke(setattr, self.dashbar, "value", 10, delay = 2)
+            invoke(setattr, self, "shift_count", 0, delay = 0.2)
         elif key == "left shift up":
             self.sliding = False
 
@@ -288,8 +337,19 @@ class Player(Entity):
         self.velocity_y = 0
         self.velocity_z = 0
         self.health = 10
+        self.healthbar.value = self.health
+        self.score = 0
+        self.score_text.text = self.score
+        application.time_scale = 1
         for enemy in self.enemies:
             enemy.reset_pos()
+
+    def shake_camera(self, duration = 0.1, divider = 70):
+        self.can_shake = True
+        self.shake_duration = duration
+        self.shake_divider = divider
+        self.prev_camera_pos = camera.position
+        invoke(setattr, self, "can_shake", False, delay = self.shake_duration)
 
 class Gun(Entity):
     def __init__(self, player):
@@ -309,6 +369,7 @@ class Gun(Entity):
         self.cooldown_t = 0
         self.cooldown_length = 0.3
         self.can_shoot = True
+        self.started_shooting = False
 
     def update(self):
         self.cooldown_t += time.dt
@@ -316,25 +377,29 @@ class Gun(Entity):
             self.cooldown_t = 0
             self.can_shoot = True
 
-            if held_keys["left mouse"]:
+            if held_keys["left mouse"] and not self.started_shooting:
                 self.shoot()
-        
+    
     def shoot(self):
         # Spawn bullet
         Bullet(self, self.tip.world_position)
 
         # Animate the gun
         self.animate_rotation((-30, 0, 0), duration = 0.1, curve = curve.linear)
-        self.animate("z", 1.3, duration = 0.1, curve = curve.linear)
-        self.animate("z", 1.7, 0.3, delay = 0.1, curve = curve.linear)
+        self.animate("z", 1, duration = 0.03, curve = curve.linear)
+        self.animate("z", 1.5, 0.2, delay = 0.1, curve = curve.linear)
         self.animate_rotation((-15, 0, 0), 0.2, delay = 0.1, curve = curve.linear)
         self.animate_rotation((0, 0, 0), 0.4, delay = 0.12, curve = curve.linear)
-
+        
         self.can_shoot = False
 
+        self.player.shake_camera()
+
     def input(self, key):
-        if key == "left mouse down":
+        if key == "left mouse down" and self.can_shoot:
             self.shoot()
+            self.started_shooting = True
+            invoke(setattr, self, "started_shooting", False, delay = 0.2)
 
 class Bullet(Entity):
     def __init__(self, gun, pos, speed = 2000, trail_colour = color.hex("#00baff")):
@@ -366,7 +431,6 @@ class Bullet(Entity):
         self.position += self.direction * self.speed * time.dt
         
         if self.is_player:
-            self.look_at(self.prev_pos)
             bullet_ray = raycast(self.world_position, self.forward, distance = 2, ignore = [self, self.gun])
             
             if bullet_ray.hit:
@@ -376,7 +440,7 @@ class Bullet(Entity):
                     if bullet_ray.entity == e:
                         e.health -= 1
                         if e.health <= 0:
-                            for i in range(10):
+                            for i in range(5):
                                 p = Particles(e.world_position, Vec3(random.random(), random.randrange(-10, 10, 1) / 10, random.random()), spray_amount = 10, model = "particles", texture = "destroyed")
                             e.reset_pos()
                             e.health = 2
@@ -385,14 +449,12 @@ class Bullet(Entity):
 
             destroy(self, delay = 3)
         else:
-            level_ray = boxcast(self.world_position, self.forward, distance = 3, traverse_target = self.gun.player.level, ignore = [self, self.gun], thickness = (2, 2))
+            level_ray = raycast(self.world_position, self.forward, distance = 3, traverse_target = self.gun.player.level, ignore = [self, self.gun])
             if distance(self, self.gun.player) <= 3:
                 if not self.hit_player:
                     self.gun.player.health -= 1
                     self.gun.player.healthbar.value = self.gun.player.health
                     self.hit_player = True
-                if self.gun.player.health <= 0:
-                    self.gun.player.ded_text.enable()
                 destroy(self)
             if level_ray.hit:
                 destroy(self)
