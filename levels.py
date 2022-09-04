@@ -1,9 +1,20 @@
 from ursina import *
 
-class FlatLevel(Entity):
+class SkyLevel(Entity):
     def __init__(self, player, **kwargs):
         super().__init__(
-            model = "flatlevel.obj", 
+            model = "skylevel.obj", 
+            texture = "level.png", 
+            collider = "mesh",
+            **kwargs
+        )
+
+        self.jumppad = JumpPad(player, jump_height = 80, position = (-28, 4, -61), rotation_y = -6, level = self)
+
+class Sandbox1(Entity):
+    def __init__(self, player, **kwargs):
+        super().__init__(
+            model = "sandbox1.obj", 
             texture = "level.png",
             scale = (10, 10, 10), 
             collider = "mesh",
@@ -31,10 +42,10 @@ class FlatLevel(Entity):
             for pad in self.pads:
                 pad.disable()
 
-class BasicLevel(Entity):
+class Sandbox2(Entity):
     def __init__(self, player, **kwargs):
         super().__init__(
-            model = "basiclevel.obj", 
+            model = "sandbox2.obj", 
             texture = "level.png",
             scale = (10, 10, 10), 
             collider = "mesh",
@@ -45,10 +56,10 @@ class BasicLevel(Entity):
         self.jumppad2 = JumpPad(player, position = (-38, 12.2, -48.5), level = self)
         self.jumppad2 = JumpPad(player, position = (0, 12.2, -74), level = self)
 
-class RopeLevel(Entity):
+class TestLevel(Entity):
     def __init__(self, player, **kwargs):
         super().__init__(
-            model = "ropelevel.obj", 
+            model = "testlevel.obj", 
             texture = "level.png",
             scale = (30, 30, 30), 
             collider = "mesh",

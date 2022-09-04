@@ -6,7 +6,7 @@ from enemy import Enemy
 
 from mainmenu import MainMenu
 
-from levels import FlatLevel, RopeLevel, BasicLevel
+from levels import SkyLevel, Sandbox1, Sandbox2, TestLevel
 
 from sun import SunLight
 
@@ -30,7 +30,7 @@ window.exit_button.disable()
 # Starting new thread for assets
 def load_assets():
     models_to_load = [
-        "flatlevel", "ropelevel", "basiclevel", "particle", "particles", "enemy", "gun", "bullet"
+        "sandbox1", "testlevel", "sandbox2", "skylevel", "particle", "particles", "enemy", "gun", "bullet"
     ]
 
     textures_to_load = [
@@ -48,18 +48,19 @@ try:
 except Exception as e:
     print("error starting thread", e)
 
-player = Player((0, 30, -4)) # Flat: (-47, 50, -94) # Rope: (-61, 100, 0)
+player = Player((-60, 15, -16)) # Flat: (-47, 50, -94) # Rope: (-61, 100, 0)
 player.disable()
 
-flatlevel = FlatLevel(player, enabled = False)
-basiclevel = BasicLevel(player, enabled = True)
-ropelevel = RopeLevel(player, enabled = False)
+skylevel = SkyLevel(player, enabled = True)
+sandbox1 = Sandbox1(player, enabled = False)
+sandbox2 = Sandbox2(player, enabled = False)
+testlevel = TestLevel(player, enabled = False)
 
-level = basiclevel
+level = skylevel
 player.level = level
 
 # Enemy
-for enemy in range(7):
+for enemy in range(5):
     e = Enemy(player, position = Vec3(random.randint(-50, 50)))
     e.disable()
     player.enemies.append(e)
@@ -76,7 +77,7 @@ Sky(texture = "sky", scale = 8000)
 
 def update():
     print(player.position)
-    if held_keys["g"]:
+    if held_keys["r"]:
         player.reset()
 
 app.run()

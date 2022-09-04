@@ -51,6 +51,7 @@ class MainMenu(Entity):
         # Endscreen
         retry_text = Text("Retry", scale = 4, line_height = 2, x = 0, origin = 0, y = 0.1, z = -100, parent = self.end_screen)
         press_space = Text("Press Space", scale = 2, line_height = 2, x = 0, origin = 0, y = 0, z = -100, parent = self.end_screen)
+        self.highscore_text = Text(text = str(self.player.highscore), origin = (0, 0), size = 0.05, scale = (0.8, 0.8), position = window.top - (0, 0.1), parent = self.end_screen, z = -100)
         camera.overlay.parent = self.end_screen
         camera.overlay.color = color.rgba(220, 0, 0, 100)
 
@@ -63,7 +64,10 @@ class MainMenu(Entity):
             if self.enable_end_screen:
                 self.end_screen.enable()
                 self.enable_end_screen = False
+                self.player.check_highscore()
                 application.time_scale = 0.2
+                self.player.dead = True
+                self.highscore_text.text = "Highscore: " + str(self.player.highscore)
 
         if held_keys["space"] and not self.enable_end_screen:
             self.player.reset()

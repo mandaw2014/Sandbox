@@ -6,6 +6,8 @@ from ursina.prefabs.health_bar import HealthBar
 
 from particles import Particles
 
+import json
+
 sign = lambda x: -1 if x < 0 else (1 if x > 0 else 0)
 
 class Player(Entity):
@@ -15,7 +17,8 @@ class Player(Entity):
             position = position,
             scale = (1.3, 1, 1.3), 
             visible_self = False,
-            collider = "box"
+            collider = "box",
+            rotation_y = -270
         )
 
         # Camera
@@ -85,11 +88,25 @@ class Player(Entity):
         self.dashbar.text_entity.disable()
         
         self.health = 10
+        self.dead = False
     
         # Score
         self.score = 0
         self.score_text = Text(text = str(self.score), origin = (0, 0), size = 0.05, scale = (1, 1), position = window.top_right - (0.1, 0.1))
         self.score_text.text = str(self.score)
+
+        # Get highscore from json file
+        path = os.path.dirname(sys.argv[0])
+        self.highscore_path = os.path.join(path, "./highscores/highscore.json")
+        
+        try:
+            with open(self.highscore_path, "r") as hs:
+                highscore_file = json.load(hs)
+                self.highscore = highscore_file["highscore"]
+        except FileNotFoundError:
+            with open(self.highscore_path, "w+") as hs:
+                json.dump({"highscore": 0}, hs, indent = 4)
+                self.highscore = 0
 
         # Dash
         self.dashing = False
@@ -195,6 +212,9 @@ class Player(Entity):
                 self.animate_position(self.position + (camera.right * 40), duration = 0.2, curve = curve.in_out_quad)
             else:
                 self.animate_position(self.position + (camera.forward * 40), duration = 0.2, curve = curve.in_out_quad)
+            
+            camera.animate("fov", 120, duration = 0.2, curve = curve.in_quad)
+            camera.animate("fov", 100, curve = curve.out_quad, delay = 0.2)
             self.dashing = False
             self.velocity_y = 0
 
@@ -328,16 +348,19 @@ class Player(Entity):
             self.sliding = False
 
     def shot_enemy(self):
-        self.score += 1
-        self.score_text.text = str(self.score)
+        if not self.dead:
+            self.score += 1
+            self.score_text.text = str(self.score)
 
     def reset(self):
-        self.position = (-47, 50, -94)
+        self.position = (-60, 15, -16)
+        self.rotation_y = -270
         self.velocity_x = 0
         self.velocity_y = 0
         self.velocity_z = 0
         self.health = 10
         self.healthbar.value = self.health
+        self.dead = False
         self.score = 0
         self.score_text.text = self.score
         application.time_scale = 1
@@ -350,6 +373,12 @@ class Player(Entity):
         self.shake_divider = divider
         self.prev_camera_pos = camera.position
         invoke(setattr, self, "can_shake", False, delay = self.shake_duration)
+
+    def check_highscore(self):
+        if self.score > self.highscore:
+            self.highscore = self.score
+            with open(self.highscore_path, "w") as hs:
+                json.dump({"highscore": int(self.highscore)}, hs, indent = 4)    
 
 class Gun(Entity):
     def __init__(self, player):
