@@ -60,9 +60,10 @@ class Player(Entity):
         self.shake_timer = 0
         self.shake_divider = 70 # the less, the more camera shake
 
-        # Gun
-        self.gun = Gun(self)
-        self.spring = Spring()
+        # Guns
+        self.rifle = Rifle(self, enabled = True)
+        self.shotgun = Shotgun(self, enabled = False)
+        self.pistol = Pistol(self, enabled = False)
 
         # Rope
         self.rope_pivot = Entity()
@@ -149,7 +150,7 @@ class Player(Entity):
         # Sliding
         if self.sliding:
             camera.y = 0
-            slide_ray = raycast(self.world_position + self.forward, self.forward, distance = 8, traverse_target = self.level, ignore = [self, self.gun, ])
+            slide_ray = raycast(self.world_position + self.forward, self.forward, distance = 8, traverse_target = self.level, ignore = [self, ])
             if not slide_ray.hit:
                 if hasattr(y_ray.world_point, "y"):
                     if y_ray.distance <= 2:
@@ -218,14 +219,11 @@ class Player(Entity):
             else:
                 self.animate_position(self.position + (camera.forward * 40), duration = 0.2, curve = curve.in_out_quad)
             
-            camera.animate("fov", 120, duration = 0.2, curve = curve.in_quad)
+            camera.animate("fov", 130, duration = 0.2, curve = curve.in_quad)
             camera.animate("fov", 100, curve = curve.out_quad, delay = 0.2)
 
-            self.using_ability = True
             self.dashing = False
             self.velocity_y = 0
-
-            invoke(setattr, self, "using_ability", False, delay = 0.5)
 
             self.shake_camera(0.3, 100)
 
@@ -314,12 +312,6 @@ class Player(Entity):
         if self.can_shake:
             camera.position = self.prev_camera_pos + Vec3(random.randrange(-10, 10), random.randrange(-10, 10), random.randrange(-10, 10)) / self.shake_divider
 
-        # Springs
-        gun_movement = self.spring.update(time.dt)
-        self.spring.shove(Vec3(mouse.x, mouse.y, 0))
-        self.gun.x = gun_movement.x + 0.5
-        self.gun.y = gun_movement.y - 0.75
-
         # Abilities
         n = clamp(self.ability_bar.value, 0, self.ability_bar.max_value)
         self.ability_bar.bar.scale_x = n / self.ability_bar.max_value
@@ -331,6 +323,16 @@ class Player(Entity):
             self.rope.disable()
             self.velocity_y += 10
             self.rope_pivot.position = self.position
+
+        # Resets the player if falls of the map
+        if self.y <= -100:
+            self.position = (-60, 15, -16)
+            self.rotation_y = -270
+            self.velocity_x = 0
+            self.velocity_y = 0
+            self.velocity_z = 0
+            self.health -= 5
+            self.healthbar.value = self.health
 
     def input(self, key):
         if key == "space":
@@ -364,6 +366,19 @@ class Player(Entity):
         elif key == "left shift up":
             self.sliding = False
 
+        if key == "1":
+            self.rifle.enable()
+            self.shotgun.disable()
+            self.pistol.disable()
+        elif key == "2":
+            self.pistol.disable()
+            self.shotgun.enable()
+            self.rifle.disable()
+        elif key == "3":
+            self.pistol.enable()
+            self.shotgun.disable()
+            self.rifle.disable()
+
     def shot_enemy(self):
         if not self.dead:
             self.score += 1
@@ -390,6 +405,7 @@ class Player(Entity):
         self.shake_divider = divider
         self.prev_camera_pos = camera.position
         invoke(setattr, self, "can_shake", False, delay = self.shake_duration)
+        invoke(setattr, camera, "position", self.prev_camera_pos, delay = self.shake_duration)
 
     def check_highscore(self):
         if self.score > self.highscore:
@@ -398,24 +414,39 @@ class Player(Entity):
                 json.dump({"highscore": int(self.highscore)}, hs, indent = 4)    
 
 class Gun(Entity):
-    def __init__(self, player):
+    def __init__(self, player, **kwargs):
         super().__init__(
-            model = "gun.obj",
-            texture = "level.png",
             parent = camera,
             scale = 0.3,
-            position = (1, -0.75, 1.7)
+            position = (0.5, -0.75, 1.7),
+            **kwargs
         )
         
         self.player = player
         self.level = self.player.level
         self.tip = Entity(parent = self, position = (-0.5, 1.3, 1.5))
 
+        self.pos_x = 0.5
+        self.pos_y = -0.75
+
         # Cooldown
         self.cooldown_t = 0
         self.cooldown_length = 0.3
         self.can_shoot = True
         self.started_shooting = False
+
+        # Damage
+        self.damage = 1
+
+        # Spring
+        self.spring = Spring()
+        self.start_spring = False
+
+        # Camera Shake amount
+        self.shake_divider = 70
+
+        # Gun type
+        self.gun_type = "pistol"
 
     def update(self):
         self.cooldown_t += time.dt
@@ -425,27 +456,112 @@ class Gun(Entity):
 
             if held_keys["left mouse"] and not self.started_shooting:
                 self.shoot()
+
+        # Springs
+        if self.start_spring:
+            gun_movement = self.spring.update(time.dt)
+            self.spring.shove(Vec3(mouse.x, mouse.y, 0))
+            self.x = gun_movement.x + self.pos_x
+            self.y = gun_movement.y + self.pos_y
     
     def shoot(self):
         # Spawn bullet
-        Bullet(self, self.tip.world_position)
+        if self.gun_type == "pistol":
+            Bullet(self, self.tip.world_position)
+        elif self.gun_type == "shotgun":
+            for i in range(random.randint(2, 3)):
+                b = Bullet(self, self.tip.world_position)
+                b.direction = b.forward + (self.left * random.randrange(-10, 10) / 700) + (self.up * random.randrange(-10, 10) / 700)
+        elif self.gun_type == "rifle":
+            Bullet(self, self.tip.world_position)
 
         # Animate the gun
-        self.animate_rotation((-30, 0, 0), duration = 0.1, curve = curve.linear)
-        self.animate("z", 1, duration = 0.03, curve = curve.linear)
-        self.animate("z", 1.5, 0.2, delay = 0.1, curve = curve.linear)
-        self.animate_rotation((-15, 0, 0), 0.2, delay = 0.1, curve = curve.linear)
-        self.animate_rotation((0, 0, 0), 0.4, delay = 0.12, curve = curve.linear)
-        
+        if self.gun_type == "pistol" or self.gun_type == "shotgun":
+            self.animate_rotation((-30, 0, 0), duration = 0.1, curve = curve.linear)
+            self.animate("z", 1, duration = 0.03, curve = curve.linear)
+            self.animate("z", 1.5, 0.2, delay = 0.1, curve = curve.linear)
+            self.animate_rotation((-15, 0, 0), 0.2, delay = 0.1, curve = curve.linear)
+            self.animate_rotation((0, 0, 0), 0.4, delay = 0.12, curve = curve.linear)
+        else:
+            self.animate_rotation((-20, 0, 0), duration = 0.1, curve = curve.linear)
+            self.animate("z", 1.2, duration = 0.03, curve = curve.linear)
+            self.animate("z", 1.5, 0.2, delay = 0.1, curve = curve.linear)
+            self.animate_rotation((-10, 0, 0), 0.2, delay = 0.1, curve = curve.linear)
+            self.animate_rotation((0, 0, 0), 0.4, delay = 0.12, curve = curve.linear)
+
         self.can_shoot = False
 
-        self.player.shake_camera()
+        self.player.shake_camera(0.1, self.shake_divider)
 
     def input(self, key):
         if key == "left mouse down" and self.can_shoot:
             self.shoot()
             self.started_shooting = True
-            invoke(setattr, self, "started_shooting", False, delay = 0.2)
+            invoke(setattr, self, "started_shooting", False, delay = self.cooldown_length / 2)
+
+    def on_enable(self):
+        self.y = -2
+        self.rotation_x = 50
+        try:
+            self.animate("y", self.pos_y, duration = 0.4, curve = curve.linear)
+        except AttributeError:
+            self.animate("y", -0.5, duration = 0.4, curve = curve.linear)
+        self.animate("rotation_x", 0, duration = 0.4, curve = curve.linear)
+        invoke(setattr, self, "start_spring", True, delay = 0.4)
+
+    def on_disable(self):
+        self.start_spring = False
+
+class Pistol(Gun):
+    def __init__(self, player, **kwargs):
+        super().__init__(
+            model = "pistol.obj",
+            texture = "level.png",
+            player = player,
+            **kwargs
+        )
+
+        self.gun_type = "pistol"
+
+class Shotgun(Gun):
+    def __init__(self, player, **kwargs):
+        super().__init__(
+            model = "shotgun.obj",
+            texture = "level.png",
+            player = player,
+            **kwargs
+        )
+
+        self.gun_type = "shotgun"
+        self.tip.z = 2
+
+        self.pos_x = 0.6
+        self.pos_y = -0.5
+
+        self.damage = 2
+
+        self.shake_divider = 40
+        self.cooldown_length = 0.8
+
+class Rifle(Gun):
+    def __init__(self, player, **kwargs):
+        super().__init__(
+            model = "rifle.obj",
+            texture = "level.png",
+            player = player,
+            **kwargs
+        )
+
+        self.gun_type = "rifle"
+        self.tip.z = 3
+
+        self.pos_x = 0.6
+        self.pos_y = -0.5
+
+        self.damage = 0.8
+
+        self.shake_divider = 120
+        self.cooldown_length = 0.2
 
 class Bullet(Entity):
     def __init__(self, gun, pos, speed = 2000, trail_colour = color.hex("#00baff")):
@@ -484,7 +600,7 @@ class Bullet(Entity):
                     p = Particles(bullet_ray.world_point - (self.forward * 5), Vec3(random.random(), random.random(), random.random()), 30)
                 for e in self.gun.player.enemies:
                     if bullet_ray.entity == e:
-                        e.health -= 1
+                        e.health -= self.gun.damage
                         if e.health <= 0:
                             for i in range(5):
                                 p = Particles(e.world_position, Vec3(random.random(), random.randrange(-10, 10, 1) / 10, random.random()), spray_amount = 10, model = "particles", texture = "destroyed")
@@ -493,7 +609,7 @@ class Bullet(Entity):
                             self.gun.player.shot_enemy()
                 destroy(self)
 
-            destroy(self, delay = 3)
+            destroy(self, delay = 2)
         else:
             level_ray = raycast(self.world_position, self.forward, distance = 3, traverse_target = self.gun.player.level, ignore = [self, self.gun])
             if distance(self, self.gun.player) <= 3:
