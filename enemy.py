@@ -31,6 +31,10 @@ class Enemy(Entity):
 
         self.random = Vec3(random.randrange(-10, 10), random.randrange(0, 3), random.randrange(-10, 10))
 
+        # Audio
+        self.gun_sound = Audio("pistol.wav", False)
+        self.gun_sound.volume = 0.05
+
     def update(self):
         if distance(self, self.player) > 20:
             self.position += ((self.player.position + self.random) - self.position).normalized() * self.move_speed * time.dt
@@ -46,7 +50,9 @@ class Enemy(Entity):
             self.cooldown_t += time.dt
             if self.cooldown_t >= self.cooldown_length:
                 self.cooldown_t = 0
-                Bullet(self, self.barrel.world_position, 700, color.orange)    
+                Bullet(self, self.barrel.world_position, 700, color.orange)  
+                if distance_xz(self, self.player) < 40:
+                    self.gun_sound.play()  
 
         # Particles
         self.particle_t += time.dt

@@ -39,7 +39,7 @@ class MainMenu(Entity):
 
             menu.on_enable = animate_in_menu
 
-        invoke(self.mainmenu.enable, delay = 0.5)
+        self.mainmenu.enable()
 
         # Main Menu
         self.start_button = Button(text = "Start", color = colourH, highlight_color = color.rgba(0, 0, 0, 0.7), scale_y = 0.1, scale_x = 0.3, y = 0.05, parent = self.mainmenu)

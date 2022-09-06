@@ -65,6 +65,9 @@ class Player(Entity):
         self.shotgun = Shotgun(self, enabled = False)
         self.pistol = Pistol(self, enabled = False)
 
+        self.guns = [self.rifle, self.shotgun, self.pistol]
+        self.current_gun = 0
+
         # Rope
         self.rope_pivot = Entity()
         self.rope = Entity(model = Mesh(vertices = [self.world_position, self.rope_pivot.world_position], mode = "line", thickness = 15, colors = [color.hex("#ff8b00")]), texture = "rope.png", enabled = False)
@@ -116,6 +119,13 @@ class Player(Entity):
         self.can_dash = True
         self.shift_count = 0
 
+        # Audio
+        self.fall_sound = Audio("fall.wav", False)
+        self.rope_sound = Audio("rope.wav", False)
+        self.dash_sound = Audio("dash.wav", False)
+
+        self.dash_sound.volume = 0.5
+
     def jump(self):
         self.jumping = True
         self.velocity_y = self.jump_height
@@ -134,6 +144,7 @@ class Player(Entity):
             if not self.grounded:
                 self.velocity_y = 0
                 self.grounded = True
+                self.fall_sound.play()
 
             # Check if hitting a wall or steep slope
             if y_ray.world_normal.y > 0.7 and y_ray.world_point.y - self.world_y < 0.5:
@@ -146,6 +157,7 @@ class Player(Entity):
             if not self.can_rope:
                 self.velocity_y -= 40 * time.dt
                 self.grounded = False
+                self.jump_count = 1
 
         # Sliding
         if self.sliding:
@@ -226,6 +238,8 @@ class Player(Entity):
             self.velocity_y = 0
 
             self.shake_camera(0.3, 100)
+
+            self.dash_sound.play()
 
             self.movementX = (self.forward[0] * self.velocity_z + 
                 self.left[0] * self.velocity_x + 
@@ -345,6 +359,8 @@ class Player(Entity):
                 rope_point = rope_ray.world_point
                 self.rope_entity = rope_ray.entity
                 self.rope_pivot.position = rope_point
+                self.rope_sound.pitch = random.uniform(0.7, 1)
+                self.rope_sound.play()
         elif key == "right mouse up":
             self.rope_pivot.position = self.position
             if self.can_rope and self.ability_bar.value > 0:
@@ -367,17 +383,35 @@ class Player(Entity):
             self.sliding = False
 
         if key == "1":
+            for gun in self.guns:
+                gun.disable()
             self.rifle.enable()
-            self.shotgun.disable()
-            self.pistol.disable()
         elif key == "2":
-            self.pistol.disable()
+            for gun in self.guns:
+                gun.disable()
             self.shotgun.enable()
-            self.rifle.disable()
         elif key == "3":
+            for gun in self.guns:
+                gun.disable()
             self.pistol.enable()
-            self.shotgun.disable()
-            self.rifle.disable()
+
+        if key == "scroll up":
+            self.current_gun = (self.current_gun - 1) % len(self.guns)
+            for i, gun in enumerate(self.guns):
+                if i == self.current_gun:
+                    gun.enable()
+                else:
+                    gun.disable()
+                
+            print(self.current_gun)
+        
+        if key == "scroll down":
+            self.current_gun = (self.current_gun + 1) % len(self.guns)
+            for i, gun in enumerate(self.guns):
+                if i == self.current_gun:
+                    gun.enable()
+                else:
+                    gun.disable()
 
     def shot_enemy(self):
         if not self.dead:
@@ -448,6 +482,12 @@ class Gun(Entity):
         # Gun type
         self.gun_type = "pistol"
 
+        # Audio
+        self.gun_sound = Audio("pistol.wav", False)
+        self.destroyed_enemy = Audio("destroyed.wav", False)
+        self.gun_sound.volume = 0.5
+        self.destroyed_enemy.volume = 0.1
+
     def update(self):
         self.cooldown_t += time.dt
         if self.cooldown_t >= self.cooldown_length:
@@ -468,12 +508,24 @@ class Gun(Entity):
         # Spawn bullet
         if self.gun_type == "pistol":
             Bullet(self, self.tip.world_position)
+            
+            self.gun_sound.clip = "pistol.wav"
+            self.gun_sound.volume = 0.5
+            self.gun_sound.play()
         elif self.gun_type == "shotgun":
             for i in range(random.randint(2, 3)):
                 b = Bullet(self, self.tip.world_position)
                 b.direction = b.forward + (self.left * random.randrange(-10, 10) / 700) + (self.up * random.randrange(-10, 10) / 700)
+
+            self.gun_sound.clip = "shotgun.wav"
+            self.gun_sound.volume = 0.5
+            self.gun_sound.play()
         elif self.gun_type == "rifle":
             Bullet(self, self.tip.world_position)
+
+            self.gun_sound.clip = "rifle.wav"
+            self.gun_sound.volume = 0.5
+            self.gun_sound.play()
 
         # Animate the gun
         if self.gun_type == "pistol" or self.gun_type == "shotgun":
@@ -607,6 +659,7 @@ class Bullet(Entity):
                             e.reset_pos()
                             e.health = 2
                             self.gun.player.shot_enemy()
+                            self.gun.destroyed_enemy.play()
                 destroy(self)
 
             destroy(self, delay = 2)

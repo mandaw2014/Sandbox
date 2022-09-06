@@ -30,7 +30,7 @@ window.exit_button.disable()
 # Starting new thread for assets
 def load_assets():
     models_to_load = [
-        "sandbox1", "testlevel", "sandbox2", "skylevel", "particle", "particles", "enemy", "pistol", "shotgun", "bullet"
+        "sandbox1", "testlevel", "sandbox2", "skylevel", "particle", "particles", "enemy", "pistol", "shotgun", "rifle", "bullet"
     ]
 
     textures_to_load = [
@@ -76,7 +76,7 @@ render.setShaderAuto()
 Sky(texture = "sky", scale = 8000)
 
 def update():
-    print(player.position)
+    # print(player.position)
     if held_keys["g"]:
         player.reset()
 
