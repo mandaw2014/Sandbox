@@ -50,6 +50,7 @@ class Enemy(Entity):
             self.cooldown_t += time.dt
             if self.cooldown_t >= self.cooldown_length:
                 self.cooldown_t = 0
+                self.cooldown_length = random.uniform(1.5, 3)
                 Bullet(self, self.barrel.world_position, 700, color.orange)  
                 if distance_xz(self, self.player) < 40:
                     self.gun_sound.play()  

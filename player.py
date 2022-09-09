@@ -71,6 +71,7 @@ class Player(Entity):
         # Rope
         self.rope_pivot = Entity()
         self.rope = Entity(model = Mesh(vertices = [self.world_position, self.rope_pivot.world_position], mode = "line", thickness = 15, colors = [color.hex("#ff8b00")]), texture = "rope.png", enabled = False)
+        self.rope_position = self.position
         self.can_rope = False
         self.rope_length = 100
         self.max_rope_length = False
@@ -124,7 +125,7 @@ class Player(Entity):
         self.rope_sound = Audio("rope.wav", False)
         self.dash_sound = Audio("dash.wav", False)
 
-        self.dash_sound.volume = 0.5
+        self.dash_sound.volume = 0.8
 
     def jump(self):
         self.jumping = True
@@ -194,8 +195,9 @@ class Player(Entity):
                     if distance(self.position, self.rope_pivot.position) < self.rope_length:
                         self.position += ((self.rope_pivot.position - self.position).normalized() * 20 * time.dt)
                         self.velocity_z += 2 * time.dt  
+                    self.rope_position = lerp(self.rope_position, self.rope_pivot.world_position, time.dt * 10)
                     self.rope.model.vertices.pop(0)
-                    self.rope.model.vertices = [self.position - (0, 5, 0) + (self.forward * 4) + (self.left * 2), self.rope_pivot.world_position]
+                    self.rope.model.vertices = [self.position - (0, 5, 0) + (self.forward * 4) + (self.left * 2), self.rope_position]
                     self.rope.model.generate()
                     self.rope.enable()
                     if self.y < self.rope_pivot.y:
@@ -359,6 +361,7 @@ class Player(Entity):
                 rope_point = rope_ray.world_point
                 self.rope_entity = rope_ray.entity
                 self.rope_pivot.position = rope_point
+                self.rope_position = self.position
                 self.rope_sound.pitch = random.uniform(0.7, 1)
                 self.rope_sound.play()
         elif key == "right mouse up":
@@ -417,6 +420,8 @@ class Player(Entity):
         if not self.dead:
             self.score += 1
             self.score_text.text = str(self.score)
+            if self.score > self.highscore:
+                self.animate_text(self.score_text, 1.8, 1)
 
     def reset(self):
         self.position = (-60, 15, -16)
@@ -446,6 +451,13 @@ class Player(Entity):
             self.highscore = self.score
             with open(self.highscore_path, "w") as hs:
                 json.dump({"highscore": int(self.highscore)}, hs, indent = 4)    
+
+    def animate_text(self, text, top = 1.2, bottom = 0.6):
+        """
+        Animates the scale of text
+        """
+        text.animate_scale((top, top, top), curve = curve.out_expo)
+        invoke(text.animate_scale, (bottom, bottom, bottom), delay = 0.4)
 
 class Gun(Entity):
     def __init__(self, player, **kwargs):
@@ -485,7 +497,7 @@ class Gun(Entity):
         # Audio
         self.gun_sound = Audio("pistol.wav", False)
         self.destroyed_enemy = Audio("destroyed.wav", False)
-        self.gun_sound.volume = 0.5
+        self.gun_sound.volume = 0.8
         self.destroyed_enemy.volume = 0.1
 
     def update(self):
@@ -510,7 +522,7 @@ class Gun(Entity):
             Bullet(self, self.tip.world_position)
             
             self.gun_sound.clip = "pistol.wav"
-            self.gun_sound.volume = 0.5
+            self.gun_sound.volume = 0.8
             self.gun_sound.play()
         elif self.gun_type == "shotgun":
             for i in range(random.randint(2, 3)):
@@ -518,13 +530,13 @@ class Gun(Entity):
                 b.direction = b.forward + (self.left * random.randrange(-10, 10) / 700) + (self.up * random.randrange(-10, 10) / 700)
 
             self.gun_sound.clip = "shotgun.wav"
-            self.gun_sound.volume = 0.5
+            self.gun_sound.volume = 0.8
             self.gun_sound.play()
         elif self.gun_type == "rifle":
             Bullet(self, self.tip.world_position)
 
             self.gun_sound.clip = "rifle.wav"
-            self.gun_sound.volume = 0.5
+            self.gun_sound.volume = 0.8
             self.gun_sound.play()
 
         # Animate the gun
