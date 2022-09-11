@@ -8,7 +8,7 @@ from particles import Particles
 
 import json
 
-sign = lambda x: -1 if x < 0 else (1 if x > 0 else -1)
+sign = lambda x: -1 if x < 0 else (1 if x > 0 else 0)
 y_dir = lambda y: -1 if y < 0 else(1 if y > 0 else -1)
 
 class Player(Entity):
@@ -160,7 +160,7 @@ class Player(Entity):
                 self.velocity_y -= 40 * time.dt
                 self.grounded = False
                 self.jump_count = 1
-                
+
             self.y += movementY * 50 * time.dt
 
         # Sliding
