@@ -42,7 +42,7 @@ class MainMenu(Entity):
         self.mainmenu.enable()
 
         # Main Menu
-        self.start_button = Button(text = "Start", color = colourH, highlight_color = color.rgba(0, 0, 0, 0.7), scale_y = 0.1, scale_x = 0.3, y = 0.05, parent = self.mainmenu)
+        self.start_button = Button(text = "Start", color = colourH, highlight_color = colourH, scale_y = 0.1, scale_x = 0.3, y = 0.05, parent = self.mainmenu)
         self.shop_button = Button(text = "Shop", color = color.rgba(0, 0, 0, 0.7), highlight_color = color.rgba(0, 0, 0, 0.7), scale_y = 0.1, scale_x = 0.3, y = -0.07, parent = self.mainmenu)
         self.quit_button = Button(text = "Quit", color = color.rgba(0, 0, 0, 0.7), highlight_color = color.rgba(0, 0, 0, 0.7), scale_y = 0.1, scale_x = 0.3, y = -0.19, parent = self.mainmenu)
 

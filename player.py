@@ -8,7 +8,8 @@ from particles import Particles
 
 import json
 
-sign = lambda x: -1 if x < 0 else (1 if x > 0 else 0)
+sign = lambda x: -1 if x < 0 else (1 if x > 0 else -1)
+y_dir = lambda y: -1 if y < 0 else(1 if y > 0 else -1)
 
 class Player(Entity):
     def __init__(self, position, speed = 5, jump_height = 14):
@@ -139,7 +140,7 @@ class Player(Entity):
         direction = (0, sign(movementY), 0)
 
         # Main raycast for collision
-        y_ray = raycast(origin = self.world_position, direction = self.down, traverse_target = self.level, ignore = [self, ])
+        y_ray = raycast(origin = self.world_position, direction = (0, y_dir(self.velocity_y), 0), traverse_target = self.level, ignore = [self, ])
             
         if y_ray.distance <= self.scale_y * 1.5 + abs(movementY):
             if not self.grounded:
@@ -159,6 +160,8 @@ class Player(Entity):
                 self.velocity_y -= 40 * time.dt
                 self.grounded = False
                 self.jump_count = 1
+                
+            self.y += movementY * 50 * time.dt
 
         # Sliding
         if self.sliding:
@@ -186,13 +189,11 @@ class Player(Entity):
         else:
             camera.y = 2
 
-        self.y += movementY * 50 * time.dt
-
         # Rope
         if self.can_rope and self.ability_bar.value > 0:
             if held_keys["right mouse"]:
                 if distance(self.position, self.rope_pivot.position) > 10:
-                    if distance(self.position, self.rope_pivot.position) < self.rope_length:
+                    if distance(self.position, self.rope_pivot.position) < self.rope_length and not y_ray.distance < 4:
                         self.position += ((self.rope_pivot.position - self.position).normalized() * 20 * time.dt)
                         self.velocity_z += 2 * time.dt  
                     self.rope_position = lerp(self.rope_position, self.rope_pivot.world_position, time.dt * 10)
@@ -386,17 +387,20 @@ class Player(Entity):
             self.sliding = False
 
         if key == "1":
-            for gun in self.guns:
-                gun.disable()
-            self.rifle.enable()
+            if not self.rifle.enabled:
+                for gun in self.guns:
+                    gun.disable()
+                self.rifle.enable()
         elif key == "2":
-            for gun in self.guns:
-                gun.disable()
-            self.shotgun.enable()
+            if not self.shotgun.enabled:
+                for gun in self.guns:
+                    gun.disable()
+                self.shotgun.enable()
         elif key == "3":
-            for gun in self.guns:
-                gun.disable()
-            self.pistol.enable()
+            if not self.pistol.enabled:
+                for gun in self.guns:
+                    gun.disable()
+                self.pistol.enable()
 
         if key == "scroll up":
             self.current_gun = (self.current_gun - 1) % len(self.guns)
@@ -405,8 +409,6 @@ class Player(Entity):
                     gun.enable()
                 else:
                     gun.disable()
-                
-            print(self.current_gun)
         
         if key == "scroll down":
             self.current_gun = (self.current_gun + 1) % len(self.guns)
@@ -677,7 +679,7 @@ class Bullet(Entity):
             destroy(self, delay = 2)
         else:
             level_ray = raycast(self.world_position, self.forward, distance = 3, traverse_target = self.gun.player.level, ignore = [self, self.gun])
-            if distance(self, self.gun.player) <= 3:
+            if distance(self, self.gun.player) <= 2:
                 if not self.hit_player:
                     self.gun.player.health -= 1
                     self.gun.player.healthbar.value = self.gun.player.health
