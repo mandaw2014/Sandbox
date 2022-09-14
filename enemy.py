@@ -1,6 +1,6 @@
 from ursina import *
 from particles import Particles
-from player import Bullet
+from guns import Bullet
 
 class Enemy(Entity):
     def __init__(self, player, move_speed = 20, position = (0, 0, 0)):
