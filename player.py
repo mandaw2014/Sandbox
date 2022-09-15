@@ -17,7 +17,6 @@ class Player(Entity):
             position = position,
             scale = (1.3, 1, 1.3), 
             visible_self = False,
-            collider = "box",
             rotation_y = -270
         )
 
@@ -234,7 +233,7 @@ class Player(Entity):
             else:
                 self.animate_position(self.position + (camera.forward * 40), duration = 0.2, curve = curve.in_out_quad)
             
-            camera.animate("fov", 130, duration = 0.2, curve = curve.in_quad)
+            camera.animate("fov", 120, duration = 0.2, curve = curve.in_quad)
             camera.animate("fov", 100, curve = curve.out_quad, delay = 0.2)
 
             self.dashing = False

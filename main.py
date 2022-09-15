@@ -76,7 +76,6 @@ render.setShaderAuto()
 Sky(texture = "sky", scale = 8000)
 
 def update():
-    # print(player.position)
     if held_keys["g"]:
         player.reset()
 

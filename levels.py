@@ -11,7 +11,7 @@ class SkyLevel(Entity):
 
         self.jumppad1 = JumpPad(player, jump_height = 80, position = (-28, 4, -61), rotation_y = -6, level = self)
         self.jumppad2 = JumpPad(player, jump_height = 30, position = (6.5, 4, 53), rotation_y = 30, level = self)
-        self.jumppad3 = JumpPad(player, jump_height = 60, position = (31, 14, 37), rotation_y = 30, level = self)
+        self.jumppad3 = JumpPad(player, jump_height = 70, position = (31, 14, 37), rotation_y = 30, level = self)
 
 class Sandbox1(Entity):
     def __init__(self, player, **kwargs):

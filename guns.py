@@ -75,8 +75,8 @@ class Gun(Entity):
             self.gun_sound.volume = 0.8
             self.gun_sound.play()
         elif self.gun_type == "shotgun":
-            for i in range(random.randint(2, 3)):
-                b = Bullet(self, self.tip.world_position, randomness = Vec3(random.randrange(-2, 2), random.randrange(-2, 2), 0))
+            for i in range(random.randint(3, 10)):
+                b = Bullet(self, self.tip.world_position, randomness = Vec3(random.randrange(-3, 3), random.randrange(-3, 3), random.randrange(-3, 3)))
 
             self.gun_sound.clip = "shotgun.wav"
             self.gun_sound.volume = 0.8
@@ -91,7 +91,7 @@ class Gun(Entity):
             Bullet(self, self.tip.world_position)
 
             self.shooting = True
-            self.gun_sound.clip = "rifle.wav"
+            self.gun_sound.clip = "minigun.wav"
             self.gun_sound.volume = 0.8
             self.gun_sound.play()
 
@@ -129,6 +129,8 @@ class Gun(Entity):
                 else:
                     self.barrel.animate("rotation_z", self.barrel.rotation_z + 720, 1)
                     invoke(setattr, self, "charged", True, delay = 1)
+
+                self.player.speed = 2
             else:
                 self.shoot()
                 self.started_shooting = True
@@ -138,6 +140,7 @@ class Gun(Entity):
             if hasattr(self, "shooting"):
                 self.shooting = False
             self.charged = False
+            self.player.speed = 5
 
     def on_enable(self):
         self.y = -2
@@ -184,9 +187,9 @@ class Bullet(Entity):
                 if mouse.hovered_entity != self.gun.player.level:
                     self.hovered_point = mouse.hovered_entity
                 else:
-                    self.hovered_point = mouse.world_point
+                    self.hovered_point = mouse.world_point + self.randomness
             else:
-                self.animate("position", self.world_position + (self.forward * 1000) + self.randomness, 0.5, curve = curve.linear)
+                self.animate("position", self.world_position + (self.forward * 10000) + self.randomness, 5, curve = curve.linear)
                 self.no_point = True
             
             destroy(self, 2)
@@ -270,7 +273,8 @@ class Rifle(Gun):
         )
 
         self.gun_type = "rifle"
-        self.tip.z = 3
+        self.tip.z = 8
+        self.tip.y = 0
 
         self.pos_x = 0.6
         self.pos_y = -0.5
@@ -293,7 +297,8 @@ class MiniGun(Gun):
         self.shooting = False
 
         self.gun_type = "minigun"
-        self.tip.z = 6
+        self.tip.z = 7
+        self.tip.y = 0
 
         self.pos_x = 0.9
         self.pos_y = -1.2
