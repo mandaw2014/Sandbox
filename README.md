@@ -12,7 +12,7 @@ pip install ursina
 ```
 
 1. Click Code, then click download zip
-2. Extract the zip, and navigate to the folder in 
+2. Extract the zip, and navigate to the folder in CMD or Terminal
 3. Type
 ```
 python main.py
