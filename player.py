@@ -380,8 +380,8 @@ class Player(Entity):
                 self.dashing = True
                 self.ability_bar.value -= 5
                 self.using_ability = True
+                invoke(setattr, self, "using_ability", False, delay = 2)
             invoke(setattr, self, "shift_count", 0, delay = 0.2)
-            invoke(setattr, self, "using_ability", False, delay = 2)
         elif key == "left shift up":
             self.sliding = False
 
