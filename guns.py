@@ -76,8 +76,8 @@ class Gun(Entity):
             self.gun_sound.play()
 
         elif self.gun_type == "shotgun":
-            for i in range(random.randint(3, 6)):
-                b = Bullet(self, self.tip.world_position, randomness = 2)
+            for i in range(random.randint(2, 4)):
+                b = Bullet(self, self.tip.world_position, randomness = 10)
 
             self.gun_sound.clip = "shotgun.wav"
             self.gun_sound.volume = 0.8
@@ -168,7 +168,7 @@ class Bullet(Entity):
         self.gun = gun
         self.speed = speed
         self.hit_player = False
-        self.randomness = Vec3((self.x + self.left[0]) * random.randint(-1, 1) * randomness, (self.y + self.up[1]) * random.randint(-1, 1) * randomness, 0)
+        self.randomness = Vec3(random.randint(-10, 10) * random.randint(-1, 1), random.randint(-10, 10) * random.randint(-1, 1), random.randint(-10, 10) * random.randint(-1, 1)) * Vec3(randomness)
 
         self.trail_thickness = 8
         self.trail = TrailRenderer(self.trail_thickness, trail_colour, color.clear, 5, parent = self)

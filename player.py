@@ -148,12 +148,13 @@ class Player(Entity):
                 self.fall_sound.play()
 
             # Check if hitting a wall or steep slope
-            if y_ray.world_normal.y > 0.7 and y_ray.world_point.y - self.world_y < 0.5:
-                # Set the y value to the ground's y value
-                if not held_keys["space"]:
-                    self.y = y_ray.world_point.y + 1.4
-                self.jump_count = 0
-                self.jumping = False
+            if y_dir(self.velocity_y) == -1:
+                if y_ray.world_normal.y > 0.7 and y_ray.world_point.y - self.world_y < 0.5:
+                    # Set the y value to the ground's y value
+                    if not held_keys["space"]:
+                        self.y = y_ray.world_point.y + 1.4
+                    self.jump_count = 0
+                    self.jumping = False
         else:
             if not self.can_rope:
                 self.velocity_y -= 40 * time.dt
@@ -165,26 +166,26 @@ class Player(Entity):
         # Sliding
         if self.sliding:
             camera.y = 0
-            slide_ray = raycast(self.world_position + self.forward, self.forward, distance = 8, traverse_target = self.level, ignore = [self, ])
-            if not slide_ray.hit:
-                if hasattr(y_ray.world_point, "y"):
-                    if y_ray.distance <= 2:
+            if y_ray.distance <= 2:
+                slide_ray = raycast(self.world_position + self.forward, self.forward, distance = 8, traverse_target = self.level, ignore = [self, ])
+                if not slide_ray.hit:
+                    if hasattr(y_ray.world_point, "y"):
                         self.y = y_ray.world_point.y + 1.4
 
                         if y_ray.world_normal[2] * 10 < 0:
                             self.velocity_z -= y_ray.world_normal[2] * 10 * time.dt
                         if y_ray.world_normal[2] * 10 > 0:
                             self.velocity_z += y_ray.world_normal[2] * 10 * time.dt
-            elif slide_ray.hit:
-                self.velocity_z = -10
-                if self.velocity_z <= -1:
-                    self.velocity_z = -1
-                if hasattr(y_ray.world_point, "y"):
-                    self.y = y_ray.world_point.y + 1.4
-            
-            if self.set_slide_rotation:
-                self.slide_pivot.rotation = camera.world_rotation
-                self.set_slide_rotation = False
+                elif slide_ray.hit:
+                    self.velocity_z = -10
+                    if self.velocity_z <= -1:
+                        self.velocity_z = -1
+                    if hasattr(y_ray.world_point, "y"):
+                        self.y = y_ray.world_point.y + 1.4
+                
+                if self.set_slide_rotation:
+                    self.slide_pivot.rotation = camera.world_rotation
+                    self.set_slide_rotation = False
         else:
             camera.y = 2
 
@@ -255,20 +256,22 @@ class Player(Entity):
 
         # Velocity / Momentum
         if not self.sliding:
+            movement = 10 if y_ray.distance < 5 and not self.can_rope else 5
+
             if held_keys["w"]:
-                self.velocity_z += 10 * time.dt if y_ray.distance < 5 and not self.can_rope else 5 * time.dt
+                self.velocity_z += movement * time.dt
             else:
                 self.velocity_z = lerp(self.velocity_z, 0 if y_ray.distance < 5 else 1, time.dt * 3)
             if held_keys["a"]:
-                self.velocity_x += 10 * time.dt if y_ray.distance < 5 and not self.can_rope else 5 * time.dt
+                self.velocity_x += movement * time.dt
             else:
                 self.velocity_x = lerp(self.velocity_x, 0 if y_ray.distance < 5 else 1, time.dt * 3)
             if held_keys["s"]:
-                self.velocity_z -= 10 * time.dt if y_ray.distance < 5 and not self.can_rope else 5 * time.dt
+                self.velocity_z -= movement * time.dt
             else:
                 self.velocity_z = lerp(self.velocity_z, 0 if y_ray.distance < 5 else 1, time.dt * 3)
             if held_keys["d"]:
-                self.velocity_x -= 10 * time.dt if y_ray.distance < 5 and not self.can_rope else 5 * time.dt
+                self.velocity_x -= movement * time.dt
             else:
                 self.velocity_x = lerp(self.velocity_x, 0 if y_ray.distance < 5 else -1, time.dt * 3)
 
@@ -285,24 +288,15 @@ class Player(Entity):
                     self.back[2] * -self.velocity_z + 
                     self.right[2] * -self.velocity_x) * self.speed * time.dt
         else:
-            self.movementX += ((self.forward[0] * held_keys["w"] / 5 + 
+            self.movementX += (self.forward[0] * held_keys["w"] + 
                 self.left[0] * held_keys["a"] + 
                 self.back[0] * held_keys["s"] + 
-                self.right[0] * held_keys["d"]) / 1.4) * time.dt
+                self.right[0] * held_keys["d"]) / 5 * time.dt
 
-            self.movementZ += ((self.forward[2] * held_keys["w"] / 5 + 
+            self.movementZ += (self.forward[2] * held_keys["w"] + 
                 self.left[2] * held_keys["a"] + 
                 self.back[2] * held_keys["s"] + 
-                self.right[2] * held_keys["d"]) / 1.4) * time.dt
-
-        if self.sliding:
-            self.movementX += (((self.slide_pivot.forward[0] * self.velocity_z) +
-                self.left[0] * held_keys["a"] * 2 + 
-                self.right[0] * held_keys["d"] * 2) / 10) * time.dt
-
-            self.movementZ += (((self.slide_pivot.forward[2] * self.velocity_z) + 
-                self.left[2] * held_keys["a"] * 2 + 
-                self.right[2] * held_keys["d"] * 2)) / 10 * time.dt
+                self.right[2] * held_keys["d"]) / 5 * time.dt
 
         # Collision Detection
         if self.movementX != 0:
