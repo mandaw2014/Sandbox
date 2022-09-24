@@ -29,9 +29,7 @@ python main.py
 
 **Shoot** - *Left Click*
 
-**Sliding** - *Shift*
-
-**Dashing** - *Double-tap Shift*
+**Dashing/Slow Motion** - *Double-tap Shift*
 
 **Respawn/Reset** - *G*
 

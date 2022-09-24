@@ -4,6 +4,7 @@ from ursina import curve
 from ursina.prefabs.health_bar import HealthBar
 
 from guns import *
+from abilities import *
 
 import json
 
@@ -68,14 +69,13 @@ class Player(Entity):
         self.guns = [self.rifle, self.shotgun, self.pistol, self.minigun]
         self.current_gun = 0
 
-        # Rope
-        self.rope_pivot = Entity()
-        self.rope = Entity(model = Mesh(vertices = [self.world_position, self.rope_pivot.world_position], mode = "line", thickness = 15, colors = [color.hex("#ff8b00")]), texture = "rope.png", enabled = False)
-        self.rope_position = self.position
-        self.can_rope = False
-        self.rope_length = 100
-        self.max_rope_length = False
-        self.below_rope = False
+        # Abilities
+        self.rope = Rope(self)
+        self.dash_ability = DashAbility(self)
+        self.slow_motion = SlowMotion(self, False)
+
+        self.primary_abilities = [self.rope]
+        self.secondary_abilities = [self.dash_ability, self.slow_motion]
 
         # Sliding
         self.sliding = False
@@ -115,17 +115,8 @@ class Player(Entity):
                 json.dump({"highscore": 0}, hs, indent = 4)
                 self.highscore = 0
 
-        # Dash
-        self.dashing = False
-        self.can_dash = True
-        self.shift_count = 0
-
         # Audio
         self.fall_sound = Audio("fall.wav", False)
-        self.rope_sound = Audio("rope.wav", False)
-        self.dash_sound = Audio("dash.wav", False)
-
-        self.dash_sound.volume = 0.8
 
     def jump(self):
         self.jumping = True
@@ -156,7 +147,7 @@ class Player(Entity):
                     self.jump_count = 0
                     self.jumping = False
         else:
-            if not self.can_rope:
+            if not self.rope.can_rope:
                 self.velocity_y -= 40 * time.dt
                 self.grounded = False
                 self.jump_count = 1
@@ -189,74 +180,9 @@ class Player(Entity):
         else:
             camera.y = 2
 
-        # Rope
-        if self.can_rope and self.ability_bar.value > 0:
-            if held_keys["right mouse"]:
-                if distance(self.position, self.rope_pivot.position) > 10:
-                    if distance(self.position, self.rope_pivot.position) < self.rope_length and not y_ray.distance < 4:
-                        self.position += ((self.rope_pivot.position - self.position).normalized() * 20) * time.dt
-                        self.velocity_z += 2 * time.dt  
-                    self.rope_position = lerp(self.rope_position, self.rope_pivot.world_position, time.dt * 10)
-                    self.rope.model.vertices.pop(0)
-                    self.rope.model.vertices = [self.position - (0, 5, 0) + (self.forward * 4) + (self.left * 2), self.rope_position]
-                    self.rope.model.generate()
-                    self.rope.enable()
-                    if self.y < self.rope_pivot.y:
-                        self.velocity_y += 40 * time.dt
-                    else:
-                        self.velocity_y -= 60 * time.dt
-
-                    if (self.rope_pivot.y - self.y) > self.rope_length:
-                        self.below_rope = True
-                        invoke(setattr, self, "below_rope", False, delay = 5)
-
-                    if self.below_rope:
-                        self.velocity_y += 50 * time.dt
-                else:
-                    self.rope.disable()
-                if distance(self.position, self.rope_pivot.position) > self.rope_length:
-                    self.max_rope_length = True
-                    invoke(setattr, self, "max_rope_length", False, delay = 2)
-                if self.max_rope_length:
-                    self.position += ((self.rope_pivot.position - self.position).normalized() * 25 * time.dt)
-                    self.velocity_z -= 5 * time.dt
-                    self.velocity_y -= 80 * time.dt
-
-                self.using_ability = True
-                self.ability_bar.value -= 3 * time.dt
-
-        # Dashing
-        if self.dashing and not self.sliding and not held_keys["right mouse"]:
-            if held_keys["a"]:
-                self.animate_position(self.position + (camera.left * 40), duration = 0.2, curve = curve.in_out_quad)
-            elif held_keys["d"]:
-                self.animate_position(self.position + (camera.right * 40), duration = 0.2, curve = curve.in_out_quad)
-            else:
-                self.animate_position(self.position + (camera.forward * 40), duration = 0.2, curve = curve.in_out_quad)
-            
-            camera.animate("fov", 120, duration = 0.2, curve = curve.in_quad)
-            camera.animate("fov", 100, curve = curve.out_quad, delay = 0.2)
-
-            self.dashing = False
-            self.velocity_y = 0
-
-            self.shake_camera(0.3, 100)
-
-            self.dash_sound.play()
-
-            self.movementX = (self.forward[0] * self.velocity_z + 
-                self.left[0] * self.velocity_x + 
-                self.back[0] * -self.velocity_z + 
-                self.right[0] * -self.velocity_x) * self.speed * time.dt
-
-            self.movementZ = (self.forward[2] * self.velocity_z + 
-                self.left[2] * self.velocity_x + 
-                self.back[2] * -self.velocity_z + 
-                self.right[2] * -self.velocity_x) * self.speed * time.dt
-
         # Velocity / Momentum
         if not self.sliding:
-            movement = 10 if y_ray.distance < 5 and not self.can_rope else 5
+            movement = 10 if y_ray.distance < 5 and not self.rope.can_rope else 5
 
             if held_keys["w"]:
                 self.velocity_z += movement * time.dt
@@ -276,7 +202,7 @@ class Player(Entity):
                 self.velocity_x = lerp(self.velocity_x, 0 if y_ray.distance < 5 else -1, time.dt * 3)
 
         # Movement
-        if y_ray.distance <= 5 or self.can_rope:
+        if y_ray.distance <= 5 or self.rope.can_rope:
             if not self.sliding:
                 self.movementX = (self.forward[0] * self.velocity_z + 
                     self.left[0] * self.velocity_x + 
@@ -291,12 +217,12 @@ class Player(Entity):
             self.movementX += (self.forward[0] * held_keys["w"] + 
                 self.left[0] * held_keys["a"] + 
                 self.back[0] * held_keys["s"] + 
-                self.right[0] * held_keys["d"]) / 5 * time.dt
+                self.right[0] * held_keys["d"]) / 4 * time.dt
 
             self.movementZ += (self.forward[2] * held_keys["w"] + 
                 self.left[2] * held_keys["a"] + 
                 self.back[2] * held_keys["s"] + 
-                self.right[2] * held_keys["d"]) / 5 * time.dt
+                self.right[2] * held_keys["d"]) / 4 * time.dt
 
         # Collision Detection
         if self.movementX != 0:
@@ -328,11 +254,10 @@ class Player(Entity):
 
         if not self.using_ability and self.ability_bar.value < 10:
             self.ability_bar.value += 5 * time.dt
-        if self.ability_bar.value <= 0 and self.can_rope:
-            self.can_rope = False
-            self.rope.disable()
-            self.velocity_y += 10
-            self.rope_pivot.position = self.position
+        if self.ability_bar.value <= 0:
+            self.rope.rope_pivot.position = self.rope.position
+            self.rope.rope.disable()
+            self.rope.can_rope = False
 
         # Resets the player if falls of the map
         if self.y <= -100:
@@ -348,34 +273,10 @@ class Player(Entity):
         if key == "space":
             if self.jump_count < 1:
                 self.jump()
-        if key == "right mouse down" and self.ability_bar.value > 3:
-            rope_ray = raycast(camera.world_position, camera.forward, distance = 100, traverse_target = self.level, ignore = [self, camera, ])
-            if rope_ray.hit:
-                self.can_rope = True
-                rope_point = rope_ray.world_point
-                self.rope_entity = rope_ray.entity
-                self.rope_pivot.position = rope_point
-                self.rope_position = self.position
-                self.rope_sound.pitch = random.uniform(0.7, 1)
-                self.rope_sound.play()
-        elif key == "right mouse up":
-            self.rope_pivot.position = self.position
-            if self.can_rope and self.ability_bar.value > 0:
-                self.rope.disable()
-                self.velocity_y += 10
-            self.can_rope = False
-            invoke(setattr, self, "using_ability", False, delay = 2)
         
         if key == "left shift":
-            self.sliding = True
+            self.sliding = False # turned sliding off for now
             self.set_slide_rotation = True
-            self.shift_count += 1
-            if self.shift_count >= 2 and self.ability_bar.value >= 5:
-                self.dashing = True
-                self.ability_bar.value -= 5
-                self.using_ability = True
-                invoke(setattr, self, "using_ability", False, delay = 2)
-            invoke(setattr, self, "shift_count", 0, delay = 0.2)
         elif key == "left shift up":
             self.sliding = False
 
@@ -425,12 +326,13 @@ class Player(Entity):
 
     def reset(self):
         self.position = (-60, 15, -16)
-        self.rotation_y = -270
+        self.rotation = (0, -270, 0)
         self.velocity_x = 0
         self.velocity_y = 0
         self.velocity_z = 0
         self.health = 10
         self.healthbar.value = self.health
+        self.ability_bar.value = 10
         self.dead = False
         self.score = 0
         self.score_text.text = self.score

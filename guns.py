@@ -201,12 +201,14 @@ class Bullet(Entity):
             if not self.no_point:
                 if self.hovered_point != self.gun.player.level and not isinstance(self.hovered_point, LVector3f):
                     if distance(self, self.hovered_point) < 3 and self.hovered_point != self.gun.player:
-                        for i in range(random.randint(2, 4)):
-                            p = Particles(self.hovered_point.world_position - (self.forward * 5), Vec3(random.random(), random.random(), random.random()), 30)
+                        for i in range(2):
+                            p = Particles(self.hovered_point.world_position, Vec3(random.random(), random.randrange(-10, 10, 1) / 10, random.random()), spray_amount = 10, model = "particles")
                             
                         self.hovered_point.health -= self.gun.damage
+                        self.hovered_point.texture = "hit.png"
+                        invoke(setattr, self.hovered_point, "texture", "level", delay = 0.1)
                         if self.hovered_point.health <= 0:
-                            for i in range(5):
+                            for i in range(6):
                                 p = Particles(self.hovered_point.world_position, Vec3(random.random(), random.randrange(-10, 10, 1) / 10, random.random()), spray_amount = 10, model = "particles", texture = "destroyed")
                             self.hovered_point.reset_pos()
                             self.hovered_point.health = 2
@@ -217,15 +219,15 @@ class Bullet(Entity):
                 else:
                     if self.gun.gun_type != "shotgun":
                         if distance(self, self.hovered_point) < 3 and self.hovered_point != self.gun.player:
-                            for i in range(5):
-                                p = Particles(self.hovered_point - (self.forward * 5), Vec3(random.random(), random.random(), random.random()), 30)
+                            for i in range(10):
+                                p = Particles(self.hovered_point - (self.forward * 10), Vec3(random.random(), random.random(), random.random()), 30)
 
                             destroy(self)
                     else:
                         level_ray = raycast(self.world_position, self.forward, distance = 3, traverse_target = self.gun.player.level, ignore = [self, self.gun, self.gun.player])
                         if level_ray.hit:
-                            for i in range(5):
-                                p = Particles(self.hovered_point - (self.forward * 5), Vec3(random.random(), random.random(), random.random()), 30)
+                            for i in range(10):
+                                p = Particles(self.hovered_point - (self.forward * 10), Vec3(random.random(), random.random(), random.random()), 30)
 
                             destroy(self)
         else:
@@ -291,7 +293,7 @@ class Rifle(Gun):
 
         self.damage = 0.8
 
-        self.shake_divider = 120
+        self.shake_divider = 80
         self.cooldown_length = 0.2
 
 class MiniGun(Gun):

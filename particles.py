@@ -13,6 +13,7 @@ class Particles(Entity):
         
         self.direction = direction
         self.spray_amount = spray_amount
+        self.prev_spray_amount = self.spray_amount
 
         self.destroy(1)
 
@@ -21,6 +22,7 @@ class Particles(Entity):
 
     def update(self):
         self.position += self.direction * self.spray_amount * time.dt
+        self.spray_amount -= self.prev_spray_amount * time.dt
 
     def destroy(self, delay = 1):
         self.fade_out(duration = 0.2, delay = 0.7, curve = curve.linear)

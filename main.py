@@ -11,6 +11,7 @@ from levels import SkyLevel, Sandbox1, Sandbox2, TestLevel
 from sun import SunLight
 
 Text.default_font = "./assets/Roboto.ttf"
+Text.default_resolution = Text.size * 1080
 
 if sys.platform != "darwin":
     window.fullscreen = True
