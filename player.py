@@ -214,15 +214,18 @@ class Player(Entity):
                     self.back[2] * -self.velocity_z + 
                     self.right[2] * -self.velocity_x) * self.speed * time.dt
         else:
-            self.movementX += (self.forward[0] * held_keys["w"] + 
-                self.left[0] * held_keys["a"] + 
-                self.back[0] * held_keys["s"] + 
-                self.right[0] * held_keys["d"]) / 4 * time.dt
+            air_movementX = 0.5 if self.movementX < 0.5 and self.movementX > -0.5 else 0.2
+            air_movementZ = 0.5 if self.movementZ < 0.5 and self.movementZ > -0.5 else 0.2
 
-            self.movementZ += (self.forward[2] * held_keys["w"] + 
-                self.left[2] * held_keys["a"] + 
-                self.back[2] * held_keys["s"] + 
-                self.right[2] * held_keys["d"]) / 4 * time.dt
+            self.movementX += (self.forward[0] * held_keys["w"] * air_movementX + 
+                self.left[0] * held_keys["a"] * air_movementX + 
+                self.back[0] * held_keys["s"] * air_movementX + 
+                self.right[0] * held_keys["d"] * air_movementX) / 2 * time.dt
+
+            self.movementZ += (self.forward[2] * held_keys["w"] * air_movementZ + 
+                self.left[2] * held_keys["a"] * air_movementZ + 
+                self.back[2] * held_keys["s"] * air_movementZ + 
+                self.right[2] * held_keys["d"] * air_movementZ) / 2 * time.dt
 
         # Collision Detection
         if self.movementX != 0:

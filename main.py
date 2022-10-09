@@ -2,11 +2,11 @@ from ursina import *
 from direct.stdpy import thread
 
 from player import Player
-from enemy import Enemy
+from enemy import Enemy, BigEnemy
 
 from mainmenu import MainMenu
 
-from levels import SkyLevel, Sandbox1, Sandbox2, TestLevel
+from levels import SkyLevel, DesertLevel
 
 from sun import SunLight
 
@@ -31,11 +31,12 @@ window.exit_button.disable()
 # Starting new thread for assets
 def load_assets():
     models_to_load = [
-        "sandbox1", "testlevel", "sandbox2", "skylevel", "particle", "particles", "enemy", "pistol", "shotgun", "rifle", "bullet"
+        "skylevel", "desertlevel", "jumppad" "particle", "particles", "enemy", "bigenemy" "pistol", 
+        "shotgun", "rifle", "pistol", "minigun", "minigun-barrel", "bullet",
     ]
 
     textures_to_load = [
-        "level", "particle", "destroyed", "jetpack", "sky", "rope"
+        "level", "particle", "destroyed", "jetpack", "sky", "rope", "hit"
     ]
 
     for i, m in enumerate(models_to_load):
@@ -49,20 +50,22 @@ try:
 except Exception as e:
     print("error starting thread", e)
 
-player = Player((-60, 15, -16)) # Flat: (-47, 50, -94) # Rope: (-61, 100, 0)
+player = Player((-60, 50, -16)) # Flat: (-47, 50, -94) # Rope: (-61, 100, 0)
 player.disable()
 
-skylevel = SkyLevel(player, enabled = True)
-sandbox1 = Sandbox1(player, enabled = False)
-sandbox2 = Sandbox2(player, enabled = False)
-testlevel = TestLevel(player, enabled = False)
+sky_level = SkyLevel(player, enabled = False)
+desert_level = DesertLevel(player, enabled = True)
 
-level = skylevel
-player.level = level
+player.level = desert_level
 
 # Enemy
 for enemy in range(5):
-    e = Enemy(player, position = Vec3(random.randint(-50, 50)))
+    i = random.randint(0, 2)
+    if i == 0:
+        e = BigEnemy(player, position = Vec3(random.randint(-50, 50)))
+    else:
+        e = Enemy(player, position = Vec3(random.randint(-50, 50)))
+
     e.disable()
     player.enemies.append(e)
 
@@ -76,8 +79,8 @@ render.setShaderAuto()
 
 Sky(texture = "sky", scale = 8000)
 
-def update():
-    if held_keys["g"]:
+def input(key):
+    if key == "g":
         player.reset()
 
 app.run()

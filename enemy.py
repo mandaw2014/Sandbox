@@ -3,17 +3,19 @@ from particles import Particles
 from guns import Bullet
 
 class Enemy(Entity):
-    def __init__(self, player, move_speed = 20, position = (0, 0, 0)):
+    def __init__(self, player, move_speed = 20, position = (0, 0, 0), **kwargs):
         super().__init__(
             model = "enemy.obj",
             texture = "level.png",
             position = position,
-            collider = "box"
+            collider = "box",
+            **kwargs
         )
 
         self.player = player
         self.move_speed = move_speed
         self.health = 2
+        self.damage = 1
 
         # Pivots
         self.thruster1 = Entity(parent = self, position = (-0.4, -2, 0))
@@ -51,7 +53,7 @@ class Enemy(Entity):
             if self.cooldown_t >= self.cooldown_length:
                 self.cooldown_t = 0
                 self.cooldown_length = random.uniform(1.5, 3)
-                Bullet(self, self.barrel.world_position, 700, color.orange)  
+                Bullet(self, self.barrel.world_position, 700, color.orange).enemy = self  
                 if distance_xz(self, self.player) < 40:
                     self.gun_sound.play()  
 
@@ -64,3 +66,14 @@ class Enemy(Entity):
 
     def reset_pos(self):
         self.position = Vec3(random.randint(-100, 300), random.randint(0, 50), random.randint(-100, 300))
+
+class BigEnemy(Enemy):
+    def __init__(self, player, move_speed = 10, position = (0, 0, 0), **kwargs):
+        super().__init__(
+            player, move_speed, position, **kwargs
+        )
+
+        self.model = "bigenemy"
+        self.cooldown_length = 3
+        self.damage = 2
+        self.health = 4

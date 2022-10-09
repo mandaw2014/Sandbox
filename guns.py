@@ -39,6 +39,7 @@ class Gun(Entity):
         # Gun type
         self.gun_type = "pistol"
         self.charged = False
+        self.equipped_ = False
 
         # Audio
         self.gun_sound = Audio("pistol.wav", False)
@@ -117,7 +118,8 @@ class Gun(Entity):
             self.animate_rotation((0, 0, 0), 0.4, delay = 0.06, curve = curve.linear)
 
         self.can_shoot = False
-
+        
+        # Camera Shake
         self.player.shake_camera(0.1, self.shake_divider)
 
     def input(self, key):
@@ -169,6 +171,7 @@ class Bullet(Entity):
         self.speed = speed
         self.hit_player = False
         self.randomness = Vec3(random.randint(-10, 10) * random.randint(-1, 1), random.randint(-10, 10) * random.randint(-1, 1), random.randint(-10, 10) * random.randint(-1, 1)) * Vec3(randomness)
+        self.enemy = None
 
         self.trail_thickness = 8
         self.trail = TrailRenderer(self.trail_thickness, trail_colour, color.clear, 5, parent = self)
@@ -219,15 +222,15 @@ class Bullet(Entity):
                 else:
                     if self.gun.gun_type != "shotgun":
                         if distance(self, self.hovered_point) < 3 and self.hovered_point != self.gun.player:
-                            for i in range(10):
-                                p = Particles(self.hovered_point - (self.forward * 10), Vec3(random.random(), random.random(), random.random()), 30)
+                            for i in range(2):
+                                p = Particles(self.hovered_point - (self.forward * 10), Vec3(random.random(), random.random(), random.random()), 30, model = "particles")
 
                             destroy(self)
                     else:
                         level_ray = raycast(self.world_position, self.forward, distance = 3, traverse_target = self.gun.player.level, ignore = [self, self.gun, self.gun.player])
                         if level_ray.hit:
-                            for i in range(10):
-                                p = Particles(self.hovered_point - (self.forward * 10), Vec3(random.random(), random.random(), random.random()), 30)
+                            for i in range(2):
+                                p = Particles(self.hovered_point - (self.forward * 10), Vec3(random.random(), random.random(), random.random()), 30, model = "particles")
 
                             destroy(self)
         else:
@@ -236,7 +239,7 @@ class Bullet(Entity):
             level_ray = raycast(self.world_position, self.forward, distance = 3, traverse_target = self.gun.player.level, ignore = [self, self.gun])
             if distance(self, self.gun.player) <= 2:
                 if not self.hit_player:
-                    self.gun.player.health -= 1
+                    self.gun.player.health -= self.enemy.damage
                     self.gun.player.healthbar.value = self.gun.player.health
                     self.hit_player = True
                 destroy(self)
@@ -270,7 +273,7 @@ class Shotgun(Gun):
         self.pos_x = 0.6
         self.pos_y = -0.5
 
-        self.damage = 2
+        self.damage = 1
 
         self.shake_divider = 40
         self.cooldown_length = 0.8
