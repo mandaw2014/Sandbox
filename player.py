@@ -61,10 +61,10 @@ class Player(Entity):
         self.shake_divider = 70 # the less, the more camera shake
 
         # Guns
-        self.rifle = Rifle(self, enabled = True)
-        self.shotgun = Shotgun(self, enabled = False)
-        self.pistol = Pistol(self, enabled = False)
-        self.minigun = MiniGun(self, enabled = False)
+        self.rifle = Rifle(self, True, enabled = True)
+        self.shotgun = Shotgun(self, False, (1, 1000, 60), enabled = True)
+        self.pistol = Pistol(self, True, enabled = False)
+        self.minigun = MiniGun(self, False, (0, 100, -55), enabled = True)
 
         self.guns = [self.rifle, self.shotgun, self.pistol, self.minigun]
         self.current_gun = 0
@@ -284,30 +284,23 @@ class Player(Entity):
             self.sliding = False
 
         if key == "1":
-            if not self.rifle.enabled:
-                for gun in self.guns:
+            for gun in self.guns:
+                if gun.equipped:
                     gun.disable()
-                self.rifle.enable()
+                    if not gun.enabled and gun != self.pistol:
+                        gun.enable()
+                        gun.visible = True
         elif key == "2":
-            if not self.shotgun.enabled:
-                for gun in self.guns:
-                    gun.disable()
-                self.shotgun.enable()
-        elif key == "3":
             if not self.pistol.enabled:
                 for gun in self.guns:
-                    gun.disable()
+                    if gun.equipped:
+                        gun.disable()
                 self.pistol.enable()
-        elif key == "4":
-            if not self.minigun.enabled:
-                for gun in self.guns:
-                    gun.disable()
-                self.minigun.enable()
 
         if key == "scroll up":
             self.current_gun = (self.current_gun - 1) % len(self.guns)
             for i, gun in enumerate(self.guns):
-                if i == self.current_gun:
+                if i == self.current_gun and gun.equipped:
                     gun.enable()
                 else:
                     gun.disable()
@@ -315,7 +308,7 @@ class Player(Entity):
         if key == "scroll down":
             self.current_gun = (self.current_gun + 1) % len(self.guns)
             for i, gun in enumerate(self.guns):
-                if i == self.current_gun:
+                if i == self.current_gun and gun.equipped:
                     gun.enable()
                 else:
                     gun.disable()

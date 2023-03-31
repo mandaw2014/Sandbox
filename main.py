@@ -53,10 +53,10 @@ except Exception as e:
 player = Player((-60, 50, -16)) # Flat: (-47, 50, -94) # Rope: (-61, 100, 0)
 player.disable()
 
-sky_level = SkyLevel(player, enabled = False)
-desert_level = DesertLevel(player, enabled = True)
+sky_level = SkyLevel(player, enabled = True)
+desert_level = DesertLevel(player, enabled = False)
 
-player.level = desert_level
+player.level = sky_level
 
 # Enemy
 for enemy in range(5):
@@ -82,5 +82,8 @@ Sky(texture = "sky", scale = 8000)
 def input(key):
     if key == "g":
         player.reset()
+
+def update():
+    print(player.minigun.position)
 
 app.run()
