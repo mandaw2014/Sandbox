@@ -1,9 +1,6 @@
 # Sandbox
 A Simple 3D Fast Paced FPS made in Python using the Ursina Engine (wip)
 
-# NOTE
-I developed this in an older version of ursina so it might not work with the newest version.
-
 # How To Play
 
 Make sure you have python and ursina installed
