@@ -6,7 +6,7 @@ colourN = color.rgba(0, 0, 0, 0.7)
 highlighted = lambda button: button.color == colourH
 
 class MainMenu(Entity):
-    def __init__(self, player):
+    def __init__(self, player, floating_islands, deserted_sands, mountainous_valley):
         super().__init__(
             parent = camera.ui
         )
@@ -14,14 +14,18 @@ class MainMenu(Entity):
         # Player
         self.player = player
 
+        # Maps
+        self.floating_islands = floating_islands
+        self.deserted_sands = deserted_sands
+        self.mountainous_valley = mountainous_valley
+
         # Menus
         self.mainmenu = Entity(parent = self, enabled = False)
         self.end_screen = Entity(parent = self, enabled = False)
         self.pause_menu = Entity(parent = self, enabled = False)
-        self.ability_menu = Entity(parent = self, enabled = False)
-        self.gun_menu = Entity(parent = self, enabled = False)
+        self.maps_menu = Entity(parent = self, enabled = False)
 
-        self.menus = [self.mainmenu, self.pause_menu, self.gun_menu, self.ability_menu]
+        self.menus = [self.mainmenu, self.pause_menu, self.maps_menu]
         self.index = 0
 
         self.enable_end_screen = True
@@ -48,7 +52,7 @@ class MainMenu(Entity):
 
         # Main Menu
         self.start_button = Button(text = "Start", color = colourH, highlight_color = colourH, scale_y = 0.1, scale_x = 0.3, y = 0.05, parent = self.mainmenu)
-        self.shop_button = Button(text = "Shop", color = colourN, highlight_color = colourN, scale_y = 0.1, scale_x = 0.3, y = -0.07, parent = self.mainmenu)
+        self.maps_button = Button(text = "Maps", color = colourN, highlight_color = colourN, scale_y = 0.1, scale_x = 0.3, y = -0.07, parent = self.mainmenu)
         self.quit_button = Button(text = "Quit", color = colourN, highlight_color = colourN, scale_y = 0.1, scale_x = 0.3, y = -0.19, parent = self.mainmenu)
 
         invoke(setattr, self.start_button, "color", colourH, delay = 0.5)
@@ -66,16 +70,10 @@ class MainMenu(Entity):
         self.mainmenu_button = Button(text = "Main Menu", color = colourN, highlight_color = colourN, scale_y = 0.1, scale_x = 0.3, y = -0.19, parent = self.pause_menu)
         self.pause_overlay = Entity(parent = self.pause_menu, model = "quad", scale = 99, color = color.rgba(20, 20, 20, 100), eternal = True, z = 10)
 
-        # Shop Menu
-        self.pistol_button = ShopItem("Pistol", "pistol-icon", menu = self.gun_menu, position = (-0.1, 0.1), icon_scale = (0.6, 0.5), shop_type = "gun", gun_type = "pistol",  equipped_text = "equipped")
-        self.rifle_button = ShopItem("Rifle", "rifle-icon.png", menu = self.gun_menu, position = (-0.1, -0.05), icon_scale = (0.6, 0.5), shop_type = "gun", gun_type = "rifle",  equipped_text = "unequipped")
-        self.shotgun_button = ShopItem("Shotgun", "shotgun-icon.png", menu = self.gun_menu, position = (0.1, 0.1), icon_scale = (0.6, 0.5), shop_type = "gun", gun_type = "shotgun",  equipped_text = "unequipped")
-        self.minigun_button = ShopItem("Minigun", "minigun-icon.png", menu = self.gun_menu, position = (0.1, -0.05), icon_scale = (0.6, 0.5), shop_type = "gun", gun_type = "minigun",  equipped_text = "unequipped")
-        self.rope_button = ShopItem("Rope", "rope-icon", menu = self.ability_menu, position = (0, 0.2))
-        self.dashing_button = ShopItem("Dashing", "dash-icon.png", menu = self.ability_menu, position = (0, 0.05), icon_scale = (0.5, 0.4))
-        self.slomo_button = ShopItem("Slo-Motion", "slomo.png", menu = self.ability_menu, position = (0, -0.1), equipped_text = "unequipped")
-        self.back_gun = Button(text = "Back", color = colourN, highlight_color = colourN, scale_y = 0.1, scale_x = 0.3, y = -0.25, parent = self.gun_menu)
-        self.back_ability = Button(text = "Back", color = colourN, highlight_color = colourN, scale_y = 0.1, scale_x = 0.3, y = -0.25, parent = self.ability_menu)
+        # Maps Menu
+        self.floating_islands_button = Button(text = "Floating Islands", color = colourN, highlighted_color = colourH, scale_y = 0.1, scale_x = 0.3, y = 0.05, parent = self.maps_menu)
+        self.deserted_sands_button = Button(text = "Deserted Sands", color = colourN, highlighted_color = colourH, scale_y = 0.1, scale_x = 0.3, y = -0.07, parent = self.maps_menu)
+        self.mountainous_valley_button = Button(text = "Mountainous Valley", color = colourN, highlighted_color = colourH, scale_y = 0.1, scale_x = 0.3, y = -0.19, parent = self.maps_menu)
 
     def update(self):
         if self.player.health <= 0:
@@ -130,10 +128,10 @@ class MainMenu(Entity):
             if self.mainmenu.enabled:
                 if highlighted(self.start_button):
                     self.start()
-                elif highlighted(self.shop_button):
-                    self.gun_menu.enable()
+                elif highlighted(self.maps_button):
+                    self.maps_menu.enable()
                     self.mainmenu.disable()
-                    self.update_menu(self.gun_menu)
+                    self.update_menu(self.maps_menu)
                 elif highlighted(self.quit_button):
                     application.quit()
 
@@ -153,46 +151,27 @@ class MainMenu(Entity):
                     self.pause_menu.disable()
                     self.update_menu(self.pause_menu)
 
-            # Shop menu
-            elif self.gun_menu.enabled:
-                if highlighted(self.back_gun):
-                    self.gun_menu.disable()
-                    self.ability_menu.disable()
-                    self.mainmenu.enable()
-                    self.update_menu(self.mainmenu)
-                if highlighted(self.back_ability):
-                    self.gun_menu.disable()
-                    self.ability_menu.disable()
-                    self.mainmenu.enable()
-                    self.update_menu(self.mainmenu)
-
-                for e in self.gun_menu.children:
-                    if isinstance(e, ShopItem):
-                        if e.shop_type == "gun":
-                            e.equipped_text = "unequipped"
-                            if highlighted(e):
-                                for gun in self.player.guns:
-                                    gun.equipped = False
-
-                                if e.gun_type == "pistol":
-                                    self.player.pistol.equipped = True
-                                    self.pistol_button.equipped_text = "equipped"
-                                elif e.gun_type == "rifle":
-                                    self.player.rifle.equipped = True
-                                    self.rifle_button.equipped_text = "equipped"
-                                elif e.gun_type == "shotgun":
-                                    self.player.shotgun.equipped = True
-                                    self.shotgun_button.equipped_text = "equipped"
-                                elif e.gun_type == "minigun":
-                                    self.player.minigun.equipped = True
-                                    self.minigun_button.equipped_text = "equipped"
-            elif self.ability_menu.enabled:
-                if highlighted(self.rope_button):
-                    self.equip_ability(self.player.rope, self.rope_button, self.player.primary_abilities)
-                elif highlighted(self.dashing_button):
-                    self.equip_ability(self.player.dash_ability, self.dashing_button, self.player.secondary_abilities)
-                elif highlighted(self.slomo_button):
-                    self.equip_ability(self.player.slow_motion, self.slomo_button, self.player.secondary_abilities)
+            # Maps menu
+            elif self.maps_menu.enabled:
+                if highlighted(self.floating_islands_button):
+                    for map in self.player.maps:
+                        map.disable()
+                    self.floating_islands.enable()
+                    self.player.map = self.floating_islands
+                    self.start()
+                if highlighted(self.deserted_sands_button):
+                    for map in self.player.maps:
+                        map.disable()
+                    self.deserted_sands.enable()
+                    self.player.map = self.deserted_sands
+                    self.start()
+                if highlighted(self.mountainous_valley_button):
+                    for map in self.player.maps:
+                        map.disable()
+                    self.mountainous_valley.enable()
+                    self.player.map = self.mountainous_valley
+                    self.player.position = (-5, 105, -10)
+                    self.start() 
 
             # End Screen
             if self.player.health <= 0:
@@ -200,22 +179,19 @@ class MainMenu(Entity):
                 self.enable_end_screen = True
                 self.player.reset()
 
-        # Pause Menu
         if key == "escape":
+            if self.maps_menu.enabled:
+                self.maps_menu.disable()
+                self.mainmenu.enable()
+
+            # Pause Menu
             if self.player.enabled:
                 self.pause()
                 self.update_menu(self.pause_menu)
 
-        # Shop Menus
-        if key == "right arrow" and self.gun_menu.enabled:
-            self.gun_menu.disable()
-            self.ability_menu.enable()
-        if key == "left arrow" and self.ability_menu.enabled:
-            self.gun_menu.enable()
-            self.ability_menu.disable()
-
     def start(self):
         self.mainmenu.disable()
+        self.maps_menu.disable()
         for enemy in self.player.enemies:
             enemy.enable()
         self.player.enable()
@@ -242,35 +218,3 @@ class MainMenu(Entity):
         menu.children[0].color = colourH
         menu.children[0].highlighted_color = colourH
         self.index = 0
-
-    def equip_ability(self, ability, shop_button, abilities_list):
-        if ability.ability_enabled:
-            ability.ability_enabled = False
-            shop_button.equipped_text.text = "unequipped"
-        else:
-            if all(not a.ability_enabled for a in abilities_list):
-                ability.ability_enabled = True
-                shop_button.equipped_text.text = "equipped"
-            else:
-                shop_button.shake()
-
-class ShopItem(Button):
-    def __init__(self, text, icon, menu, shop_type = "ability", gun_type = "none", position = (0, 0), icon_scale = (0.4, 0.4), equipped_text = "equipped", **kwargs):
-        super().__init__(
-            parent = menu,
-            text = text,
-            position = position,
-            color = colourN,
-            highlight_color = colourN,
-            scale_y = 0.14, 
-            scale_x = 0.16,
-            **kwargs
-        )
-
-        self.shop_type = shop_type
-        if self.shop_type == "gun":
-            self.gun_type = gun_type
-
-        self.icon_ = Entity(model = "quad", texture = icon, parent = self, scale = icon_scale, y = -0.08)
-        self.equipped_text = Text(parent = self, text = equipped_text, scale = 4, y = -0.35, origin = 0)
-        self.text_entity.y = 0.3

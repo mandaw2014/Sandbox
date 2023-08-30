@@ -68,7 +68,7 @@ class Rope(Ability):
     def input(self, key):
         if self.ability_enabled:
             if key == "right mouse down" and self.player.ability_bar.value > 0:
-                rope_ray = raycast(camera.world_position, camera.forward, distance = 100, traverse_target = self.player.level, ignore = [self, camera, ])
+                rope_ray = raycast(camera.world_position, camera.forward, distance = 100, traverse_target = self.player.map, ignore = [self, camera, ])
                 if rope_ray.hit:
                     self.can_rope = True
                     rope_point = rope_ray.world_point

@@ -8,7 +8,7 @@ Make sure you have python and ursina installed
 https://www.python.org/
 
 ```
-pip install ursina
+pip install https://github.com/pokepetter/ursina/archive/master.zip
 ```
 
 1. Click Code, then click download zip

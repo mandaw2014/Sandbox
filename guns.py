@@ -1,6 +1,6 @@
 from ursina import *
 from ursina import curve
-from ursina.prefabs.trail_renderer import TrailRenderer
+from trail_renderer import TrailRenderer
 
 from particles import Particles
 
@@ -12,12 +12,9 @@ class Gun(Entity):
             position = (0.5, -0.75, 1.7),
             **kwargs
         )
-
-        if not equipped:
-            self.parent = scene
         
         self.player = player
-        self.level = self.player.level
+        self.map = self.player.map
         self.tip = Entity(parent = self, position = (-0.5, 1.3, 1.5))
 
         self.pos_x = 0.5
@@ -31,7 +28,6 @@ class Gun(Entity):
         self.cooldown_length = 0.3
         self.can_shoot = True
         self.started_shooting = False
-        self.start_pickup = False
 
         # Damage
         self.damage = 1
@@ -76,17 +72,7 @@ class Gun(Entity):
                     self.x = gun_movement.x + self.pos_x
                     self.y = gun_movement.y + self.pos_y
 
-            # Gravity
             if not self.equipped:
-                ray = raycast(self.world_position, (0, -1, 0), 1, self.player.level, ignore = [self, ])
-
-                if not ray.hit and not self.start_pickup:
-                    self.y -= 20 * time.dt
-
-                if self.start_pickup:
-                    self.position = lerp(self.position, self.pivot.world_position, time.dt * 20)
-                    self.rotation = lerp(self.rotation, camera.world_rotation, time.dt * 20)
-
                 # Pivot Springs
                 pivot_movement = self.spring.update(time.dt)
                 self.spring.shove(Vec3(mouse.x, mouse.y, 0))
@@ -95,87 +81,63 @@ class Gun(Entity):
 
     def shoot(self):
         # Spawn bullet
-        if self.gun_type == "pistol":
-            Bullet(self, self.tip.world_position)
+        if self.equipped:
+            if self.gun_type == "pistol":
+                Bullet(self, self.tip.world_position)
+                
+                self.gun_sound.clip = "pistol.wav"
+                self.gun_sound.volume = 0.8
+                self.gun_sound.play()
+
+            elif self.gun_type == "shotgun":
+                for i in range(random.randint(2, 4)):
+                    b = Bullet(self, self.tip.world_position, randomness = 10)
+
+                self.gun_sound.clip = "shotgun.wav"
+                self.gun_sound.volume = 0.8
+                self.gun_sound.play()
+            elif self.gun_type == "rifle":
+                Bullet(self, self.tip.world_position)
+
+                self.gun_sound.clip = "rifle.wav"
+                self.gun_sound.volume = 0.8
+                self.gun_sound.play()
+            elif self.gun_type == "minigun":
+                Bullet(self, self.tip.world_position)
+
+                self.shooting = True
+                self.gun_sound.clip = "minigun.wav"
+                self.gun_sound.volume = 0.8
+                self.gun_sound.play()
+
+            # Animate the gun
+            if self.gun_type == "pistol" or self.gun_type == "shotgun":
+                self.animate_rotation((-30, 0, 0), duration = 0.1, curve = curve.linear)
+                self.animate("z", 1, duration = 0.03, curve = curve.linear)
+                self.animate("z", 1.5, 0.2, delay = 0.1, curve = curve.linear)
+                self.animate_rotation((-15, 0, 0), 0.2, delay = 0.1, curve = curve.linear)
+                self.animate_rotation((0, 0, 0), 0.4, delay = 0.12, curve = curve.linear)
+            elif self.gun_type == "rifle":
+                self.animate_rotation((-20, 0, 0), duration = 0.1, curve = curve.linear)
+                self.animate("z", 1.2, duration = 0.03, curve = curve.linear)
+                self.animate("z", 1.5, 0.2, delay = 0.1, curve = curve.linear)
+                self.animate_rotation((-10, 0, 0), 0.2, delay = 0.1, curve = curve.linear)
+                self.animate_rotation((0, 0, 0), 0.4, delay = 0.12, curve = curve.linear)
+            elif self.gun_type == "minigun":
+                self.animate_rotation((-10, 0, 0), duration = 0.05, curve = curve.linear)
+                self.animate("z", 1, duration = 0.015, curve = curve.linear)
+                self.animate("z", 1.5, 0.2, delay = 0.05, curve = curve.linear)
+                self.animate_rotation((-5, 0, 0), 0.2, delay = 0.05, curve = curve.linear)
+                self.animate_rotation((0, 0, 0), 0.4, delay = 0.06, curve = curve.linear)
+
+            self.can_shoot = False
             
-            self.gun_sound.clip = "pistol.wav"
-            self.gun_sound.volume = 0.8
-            self.gun_sound.play()
+            # Camera Shake
+            self.player.shake_camera(0.1, self.shake_divider)
 
-        elif self.gun_type == "shotgun":
-            for i in range(random.randint(2, 4)):
-                b = Bullet(self, self.tip.world_position, randomness = 10)
-
-            self.gun_sound.clip = "shotgun.wav"
-            self.gun_sound.volume = 0.8
-            self.gun_sound.play()
-        elif self.gun_type == "rifle":
-            Bullet(self, self.tip.world_position)
-
-            self.gun_sound.clip = "rifle.wav"
-            self.gun_sound.volume = 0.8
-            self.gun_sound.play()
-        elif self.gun_type == "minigun":
-            Bullet(self, self.tip.world_position)
-
-            self.shooting = True
-            self.gun_sound.clip = "minigun.wav"
-            self.gun_sound.volume = 0.8
-            self.gun_sound.play()
-
-        # Animate the gun
-        if self.gun_type == "pistol" or self.gun_type == "shotgun":
-            self.animate_rotation((-30, 0, 0), duration = 0.1, curve = curve.linear)
-            self.animate("z", 1, duration = 0.03, curve = curve.linear)
-            self.animate("z", 1.5, 0.2, delay = 0.1, curve = curve.linear)
-            self.animate_rotation((-15, 0, 0), 0.2, delay = 0.1, curve = curve.linear)
-            self.animate_rotation((0, 0, 0), 0.4, delay = 0.12, curve = curve.linear)
-        elif self.gun_type == "rifle":
-            self.animate_rotation((-20, 0, 0), duration = 0.1, curve = curve.linear)
-            self.animate("z", 1.2, duration = 0.03, curve = curve.linear)
-            self.animate("z", 1.5, 0.2, delay = 0.1, curve = curve.linear)
-            self.animate_rotation((-10, 0, 0), 0.2, delay = 0.1, curve = curve.linear)
-            self.animate_rotation((0, 0, 0), 0.4, delay = 0.12, curve = curve.linear)
-        elif self.gun_type == "minigun":
-            self.animate_rotation((-10, 0, 0), duration = 0.05, curve = curve.linear)
-            self.animate("z", 1, duration = 0.015, curve = curve.linear)
-            self.animate("z", 1.5, 0.2, delay = 0.05, curve = curve.linear)
-            self.animate_rotation((-5, 0, 0), 0.2, delay = 0.05, curve = curve.linear)
-            self.animate_rotation((0, 0, 0), 0.4, delay = 0.06, curve = curve.linear)
-
-        self.can_shoot = False
-        
-        # Camera Shake
-        self.player.shake_camera(0.1, self.shake_divider)
-
-    def pickup(self):
-        if distance(self.player, self) < 5:
-            if not self.equipped:
-                if any(gun.equipped and gun.gun_type != "pistol" for gun in self.player.guns) and any(gun.enabled and gun.gun_type != "pistol" for gun in self.player.guns):
-                    pass
-                else:
-                    for gun in self.player.guns:
-                        if distance(gun, self.player) < distance(self, self.player):
-                            return
-
-                    self.start_pickup = True
-                    invoke(setattr, self, "start_pickup", False, delay = 0.2)
-                    invoke(setattr, self, "start_spring", True, delay = 0.2)
-                    invoke(setattr, self, "parent", camera, delay = 0.2)
-                    invoke(setattr, self, "position", (0.5, -0.75, 1.7), delay = 0.1998)
-                    invoke(setattr, self, "rotation", Vec3(0), delay = 0.2)
-                    invoke(setattr, self, "equipped", True, delay = 0.2)
-
-                    for gun in self.player.guns:
-                        if gun.equipped and gun.enabled and gun != self:
-                            self.visible = False
-                            self.disable()
-
-    def drop(self):
-        if self.equipped and self.enabled and self.gun_type != "pistol":
-            self.position = self.player.position + (0, 1, 0)
-            self.parent = scene
-            self.equipped = False
+    def equip(self):
+        self.equipped = True
+        self.on_equipped()
 
     def input(self, key):
         if key == "left mouse down" and self.can_shoot:
@@ -204,10 +166,10 @@ class Gun(Entity):
             if distance(self, self.player) < 10:
                 self.pickup()
 
-        elif key == "q":
-            self.drop()
-
     def on_enable(self):
+        self.on_equipped()
+        
+    def on_equipped(self): 
         self.y = -2
         self.rotation_x = 50
         try:
@@ -248,7 +210,7 @@ class Bullet(Entity):
 
         if self.is_player:
             if mouse.hovered_entity:
-                if mouse.hovered_entity != self.gun.player.level:
+                if mouse.hovered_entity != self.gun.player.map:
                     self.hovered_point = mouse.hovered_entity
                     self.animate("position", Vec3(self.hovered_point.world_position) + (self.forward * 10000) + self.randomness, distance(self.hovered_point.world_position + (self.forward * 10000), self.gun.player) / 150, curve = curve.linear)
                 else:
@@ -264,7 +226,7 @@ class Bullet(Entity):
     def update(self):   
         if self.is_player:
             if not self.no_point:
-                if self.hovered_point != self.gun.player.level and not isinstance(self.hovered_point, LVector3f):
+                if self.hovered_point != self.gun.player.map and not isinstance(self.hovered_point, LVector3f):
                     if distance(self, self.hovered_point) < 3 and self.hovered_point != self.gun.player:
                         for i in range(2):
                             p = Particles(self.hovered_point.world_position, Vec3(random.random(), random.randrange(-10, 10, 1) / 10, random.random()), spray_amount = 10, model = "particles")
@@ -289,7 +251,7 @@ class Bullet(Entity):
 
                             destroy(self)
                     else:
-                        level_ray = raycast(self.world_position, self.forward, distance = 3, traverse_target = self.gun.player.level, ignore = [self, self.gun, self.gun.player])
+                        level_ray = raycast(self.world_position, self.forward, distance = 3, traverse_target = self.gun.player.map, ignore = [self, self.gun, self.gun.player])
                         if level_ray.hit:
                             for i in range(2):
                                 p = Particles(self.hovered_point - (self.forward * 10), Vec3(random.random(), random.random(), random.random()), 30, model = "particles")
@@ -298,7 +260,7 @@ class Bullet(Entity):
         else:
             self.position += self.forward * self.speed * time.dt
 
-            level_ray = raycast(self.world_position, self.forward, distance = 3, traverse_target = self.gun.player.level, ignore = [self, self.gun])
+            level_ray = raycast(self.world_position, self.forward, distance = 3, traverse_target = self.gun.player.map, ignore = [self, self.gun])
             if distance(self, self.gun.player) <= 2:
                 if not self.hit_player:
                     self.gun.player.health -= self.enemy.damage
@@ -309,8 +271,79 @@ class Bullet(Entity):
                 destroy(self)
             destroy(self, delay = 2)
 
+class Rocket(Entity):
+    def __init__(self, gun, pos, speed = 100, trail_colour = color.hex("#00baff"), randomness = 0, cooldown = 3):
+        super().__init__(
+            model = "rocket.obj",
+            texture = "level.png",
+            position = pos,
+            parent = gun
+        )
+
+        self.gun = gun
+        self.speed = speed
+        self.randomness = Vec3(random.randint(-10, 10) * random.randint(-1, 1), random.randint(-10, 10) * random.randint(-1, 1), random.randint(-10, 10) * random.randint(-1, 1)) * Vec3(randomness)
+        self.pos = pos
+        self.trail_colour = trail_colour
+        self.no_point = False
+        self.cooldown = cooldown
+
+        self.fired = False
+        self.gun.ready = True
+
+    def fire(self):
+        self.fired = True
+        self.parent = scene
+        self.gun.ready = False
+        self.position = self.gun.world_position
+        self.rotation = camera.world_rotation
+        
+        self.trail_thickness = 8
+        self.trail = TrailRenderer(self.trail_thickness, self.trail_colour, color.clear, 5, parent = self)
+    
+        if mouse.hovered_entity:
+            if mouse.hovered_entity != self.gun.player.map:
+                self.hovered_point = mouse.hovered_entity
+                self.animate("position", Vec3(self.hovered_point.world_position) + (self.forward) + self.randomness, distance(self.hovered_point.world_position + (self.forward), self.gun.player) / 150, curve = curve.linear)
+            else:
+                self.hovered_point = mouse.world_point
+                self.animate("position", Vec3(self.hovered_point) + self.randomness + (self.forward), distance(self.hovered_point + (self.forward), self.gun.player) / 150, curve = curve.linear)
+            self.no_point = False
+        else:
+            self.animate("position", self.world_position + (self.forward * 400) + self.randomness, 1.9, curve = curve.linear)
+            self.no_point = True
+
+    def update(self): 
+        if self.fired and not self.no_point:
+            if self.hovered_point != self.gun.player.map and not isinstance(self.hovered_point, LVector3f):
+                if distance(self, self.hovered_point) < 3 and self.hovered_point != self.gun.player:
+                    for i in range(2):
+                        p = Particles(self.hovered_point.world_position, Vec3(random.random(), random.randrange(-10, 10, 1) / 10, random.random()), spray_amount = 10, model = "particles")
+                    
+                    for enemy in self.gun.player.enemies:
+                        if distance(self, enemy) < 10:
+                            enemy.health -= (self.gun.damage - distance(self, enemy))
+                            enemy.texture = "hit.png"
+                            invoke(setattr, enemy, "texture", "level", delay = 0.1)
+                            if enemy.health <= 0:
+                                for i in range(6):
+                                    p = Particles(enemy.world_position, Vec3(random.random(), random.randrange(-10, 10, 1) / 10, random.random()), spray_amount = 10, model = "particles", texture = "destroyed")
+                                enemy.reset_pos()
+                                enemy.health = 2
+                                self.gun.player.shot_enemy()
+                                self.gun.destroyed_enemy.play() 
+                    
+                    destroy(self)
+            else:
+                level_ray = raycast(self.world_position, self.forward, distance = 3, traverse_target = self.gun.player.map, ignore = [self, self.gun, self.gun.player])
+                if level_ray.hit:
+                    for i in range(10):
+                        p = Particles(self.hovered_point - (self.forward * 10), Vec3(random.random(), random.random(), random.random()), 30, model = "particles", texture = "jetpack")
+
+                    destroy(self)
+
 class Pistol(Gun):
-    def __init__(self, player, equipped = True, position = (0, 0, 0), **kwargs):
+    def __init__(self, player, equipped = True, **kwargs):
         super().__init__(
             model = "pistol.obj",
             texture = "level.png",
@@ -318,15 +351,12 @@ class Pistol(Gun):
             equipped = equipped,
             **kwargs
         )
-        
-        if not self.equipped:
-            self.position = position
 
         self.gun_type = "pistol"
-        self.equipped = True
+        self.equip()
 
 class Shotgun(Gun):
-    def __init__(self, player, equipped = True, position = (0, 0, 0), **kwargs):
+    def __init__(self, player, equipped = False, **kwargs):
         super().__init__(
             model = "shotgun.obj",
             texture = "level.png",
@@ -334,9 +364,6 @@ class Shotgun(Gun):
             equipped = equipped,
             **kwargs
         )
-        
-        if not self.equipped:
-            self.position = position
 
         self.gun_type = "shotgun"
         self.tip.z = 2
@@ -350,7 +377,7 @@ class Shotgun(Gun):
         self.cooldown_length = 0.8
 
 class Rifle(Gun):
-    def __init__(self, player, equipped = True, position = (0, 0, 0), **kwargs):
+    def __init__(self, player, equipped = True, **kwargs):
         super().__init__(
             model = "rifle.obj",
             texture = "level.png",
@@ -358,9 +385,6 @@ class Rifle(Gun):
             equipped = equipped,
             **kwargs
         )
-        
-        if not self.equipped:
-            self.position = position
 
         self.gun_type = "rifle"
         self.tip.z = 8
@@ -373,10 +397,10 @@ class Rifle(Gun):
 
         self.shake_divider = 80
         self.cooldown_length = 0.2
-        self.equipped = True
+        self.equip()
 
 class MiniGun(Gun):
-    def __init__(self, player, equipped = False, position = (0, 0, 0), **kwargs):
+    def __init__(self, player, equipped = False, **kwargs):
         super().__init__(
             model = "minigun.obj",
             texture = "level.png",
@@ -384,9 +408,6 @@ class MiniGun(Gun):
             equipped = equipped,
             **kwargs
         )
-        
-        if not self.equipped:
-            self.position = position
 
         self.barrel = Entity(model = "minigun-barrel", texture = "level", parent = self)
         self.shooting = False
@@ -407,6 +428,49 @@ class MiniGun(Gun):
         if self.shooting:
             self.barrel.rotation_z += 400 * time.dt
         return super().update()
+    
+class RocketLauncher(Gun):
+    def __init__(self, player, equipped = False, **kwargs):
+        super().__init__(
+            model = "rocket-launcher.obj",
+            texture = "level.png",
+            player = player,
+            equipped = equipped,
+            **kwargs
+        )
+
+        self.gun_type = "rocket launcher"
+        self.tip.z = 8
+        self.tip.y = 0
+
+        self.pos_x = 0.6
+        self.pos_y = -0.5
+
+        self.damage = 10
+        self.ready = True
+
+        self.shake_divider = 20
+        self.cooldown_length = 5
+
+        self.rocket = Rocket(self, (0, 0, 0))
+
+    def input(self, key):
+        if key == "left mouse down" and self.ready:
+            self.rocket.fire()
+            self.animate_rotation((-40, 0, 0), duration = 0.1, curve = curve.linear)
+            self.animate("z", 0.5, duration = 0.1, curve = curve.linear)
+            self.animate("z", 1.5, 0.2, delay = 0.1, curve = curve.linear)
+            self.animate_rotation((-5, 0, 0), 0.5, delay = 0.15, curve = curve.linear)
+            self.animate_rotation((0, 0, 0), 0.6, delay = 0.5, curve = curve.linear)
+            
+            self.player.shake_camera(0.1, self.shake_divider)
+            invoke(self.reload, delay = 3)
+
+            self.gun_sound.clip = "rocket_launcher.wav"
+            self.gun_sound.play()
+
+    def reload(self):
+        self.rocket = Rocket(self, (0, 0, 0))
 
 class Spring:
     def __init__(self, mass = 5, force = 50, damping = 4, speed = 4):

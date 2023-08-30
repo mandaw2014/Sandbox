@@ -51,8 +51,9 @@ class Player(Entity):
 
         self.mouse_sensitivity = 50
 
-        # Level
-        self.level = None
+        # Map
+        self.map = None
+        self.maps = []
         
         # Camera Shake
         self.can_shake = False
@@ -62,11 +63,12 @@ class Player(Entity):
 
         # Guns
         self.rifle = Rifle(self, True, enabled = True)
-        self.shotgun = Shotgun(self, False, (1, 1000, 60), enabled = True)
+        self.shotgun = Shotgun(self, True, enabled = False)
         self.pistol = Pistol(self, True, enabled = False)
-        self.minigun = MiniGun(self, False, (0, 100, -55), enabled = True)
+        self.minigun = MiniGun(self, True, enabled = False)
+        self.rocket_launcher = RocketLauncher(self, True, enabled = False)
 
-        self.guns = [self.rifle, self.shotgun, self.pistol, self.minigun]
+        self.guns = [self.rifle, self.shotgun, self.pistol, self.minigun, self.rocket_launcher]
         self.current_gun = 0
 
         # Abilities
@@ -130,7 +132,7 @@ class Player(Entity):
         direction = (0, sign(movementY), 0)
 
         # Main raycast for collision
-        y_ray = raycast(origin = self.world_position, direction = (0, y_dir(self.velocity_y), 0), traverse_target = self.level, ignore = [self, ])
+        y_ray = raycast(origin = self.world_position, direction = (0, y_dir(self.velocity_y), 0), traverse_target = self.map, ignore = [self, ])
             
         if y_ray.distance <= self.scale_y * 1.5 + abs(movementY):
             if not self.grounded:
@@ -158,7 +160,7 @@ class Player(Entity):
         if self.sliding:
             camera.y = 0
             if y_ray.distance <= 2:
-                slide_ray = raycast(self.world_position + self.forward, self.forward, distance = 8, traverse_target = self.level, ignore = [self, ])
+                slide_ray = raycast(self.world_position + self.forward, self.forward, distance = 8, traverse_target = self.map, ignore = [self, ])
                 if not slide_ray.hit:
                     if hasattr(y_ray.world_point, "y"):
                         self.y = y_ray.world_point.y + 1.4
@@ -230,14 +232,14 @@ class Player(Entity):
         # Collision Detection
         if self.movementX != 0:
             direction = (sign(self.movementX), 0, 0)
-            x_ray = raycast(origin = self.world_position, direction = direction, traverse_target = self.level, ignore = [self, ])
+            x_ray = raycast(origin = self.world_position, direction = direction, traverse_target = self.map, ignore = [self, ])
 
             if x_ray.distance > self.scale_x / 2 + abs(self.movementX):
                 self.x += self.movementX
 
         if self.movementZ != 0:
             direction = (0, 0, sign(self.movementZ))
-            z_ray = raycast(origin = self.world_position, direction = direction, traverse_target = self.level, ignore = [self, ])
+            z_ray = raycast(origin = self.world_position, direction = direction, traverse_target = self.map, ignore = [self, ])
 
             if z_ray.distance > self.scale_z / 2 + abs(self.movementZ):
                 self.z += self.movementZ
@@ -284,23 +286,35 @@ class Player(Entity):
             self.sliding = False
 
         if key == "1":
-            for gun in self.guns:
-                if gun.equipped:
+            if not self.rifle.enabled:
+                for gun in self.guns:
                     gun.disable()
-                    if not gun.enabled and gun != self.pistol:
-                        gun.enable()
-                        gun.visible = True
+                self.rifle.enable()
         elif key == "2":
+            if not self.shotgun.enabled:
+                for gun in self.guns:
+                    gun.disable()
+                self.shotgun.enable()
+        elif key == "3":
             if not self.pistol.enabled:
                 for gun in self.guns:
-                    if gun.equipped:
-                        gun.disable()
+                    gun.disable()
                 self.pistol.enable()
+        elif key == "4":
+            if not self.minigun.enabled:
+                for gun in self.guns:
+                    gun.disable()
+                self.minigun.enable()
+        elif key == "5":
+            if not self.rocket_launcher.enabled:
+                for gun in self.guns:
+                    gun.disable()
+                self.rocket_launcher.enable()
 
         if key == "scroll up":
             self.current_gun = (self.current_gun - 1) % len(self.guns)
             for i, gun in enumerate(self.guns):
-                if i == self.current_gun and gun.equipped:
+                if i == self.current_gun:
                     gun.enable()
                 else:
                     gun.disable()
@@ -308,7 +322,7 @@ class Player(Entity):
         if key == "scroll down":
             self.current_gun = (self.current_gun + 1) % len(self.guns)
             for i, gun in enumerate(self.guns):
-                if i == self.current_gun and gun.equipped:
+                if i == self.current_gun:
                     gun.enable()
                 else:
                     gun.disable()
