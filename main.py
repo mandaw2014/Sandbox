@@ -8,7 +8,7 @@ from mainmenu import MainMenu
 
 from maps import FloatingIslands, DesertedSands, MountainousValley
 
-from sun import SunLight
+from scene_lighting import SceneLighting
 
 Text.default_font = "./assets/Roboto.ttf"
 Text.default_resolution = Text.size * 1080
@@ -66,12 +66,7 @@ for enemy in range(10):
 mainmenu = MainMenu(player, floating_islands, deserted_sands, mountainous_valley)
 
 # Lighting + shadows
-sun = SunLight(direction = (-0.7, -0.9, 0.5), resolution = 3072, player = player)
-ambient = AmbientLight(color = Vec4(0.5, 0.55, 0.66, 0) * 1.3)
-
-# render.setShaderAuto()
-
-Sky(texture = "sky", scale = 8000)
+scene_lighting = SceneLighting(ursina = app, player = player, sun_direction = (-0.7, -0.9, 0.5), shadow_resolution = 4096, sky_texture = "sky")
 
 def input(key):
     if key == "g":
