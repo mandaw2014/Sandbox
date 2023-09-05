@@ -5,12 +5,10 @@ from random import random
 
 
 class SceneLighting(Entity):
-    def __init__(self, ursina, player, sun_direction = (0.75, -1, 0.5), sun_color = (0.9, 0.85, 0.8, 1.0), ambient_color = (0.4, 0.5, 0.6, 0.5), 
+    def __init__(self, ursina, player, sun_direction = (0.75, -1, 0.5), sun_color = (1.0, 0.7, 0.3, 1.0), ambient_color = (0.6, 0.65, 0.7, 0.5), 
                  shadow_resolution = 2048, shadow_size = 100, shadow_height = 200, shadow_bias = 0.0, shadow_camera_direction_offset = True, 
                  shadow_filter_radius = 3.0, shadow_filter_samples = 10.0, soft_shadows = True,
                  sky_texture = None, sky_color = (1.0, 1.0, 1.0, 1.5), gamma = 2.0):
-        
-        super().__init__()
 
         self.player = player
         self.shadow_camera_direction_offset = (shadow_size / 2.0) * shadow_camera_direction_offset
@@ -28,7 +26,7 @@ class SceneLighting(Entity):
             noise_texture.setMagfilter(SamplerState.FT_nearest)
             noise_texture.setMagfilter(SamplerState.FT_nearest)
             return noise_texture
-        
+
 
         # sky
         if (sky_texture):
@@ -36,7 +34,6 @@ class SceneLighting(Entity):
             self.sky = Entity(model = "sphere", texture = sky_texture, scale = 5000, double_sided = True, color = sky_color)
             self.sky.setShader(self.sky_shader)
             self.sky.setShaderInput("gamma", gamma)
-        
 
         # bufffer creation
         win_prop = WindowProperties(size = (shadow_resolution, shadow_resolution))

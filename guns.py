@@ -162,10 +162,6 @@ class Gun(Entity):
             self.charged = False
             self.player.speed = 5
 
-        if key == "e":
-            if distance(self, self.player) < 10:
-                self.pickup()
-
     def on_enable(self):
         self.on_equipped()
         
@@ -316,7 +312,7 @@ class Rocket(Entity):
     def update(self): 
         if self.fired and not self.no_point:
             if self.hovered_point != self.gun.player.map and not isinstance(self.hovered_point, LVector3f):
-                if distance(self, self.hovered_point) < 3 and self.hovered_point != self.gun.player:
+                if distance(self, self.hovered_point) < 5 and self.hovered_point != self.gun.player:
                     for i in range(2):
                         p = Particles(self.hovered_point.world_position, Vec3(random.random(), random.randrange(-10, 10, 1) / 10, random.random()), spray_amount = 10, model = "particles")
                     

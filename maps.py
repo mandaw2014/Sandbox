@@ -28,20 +28,23 @@ class MountainousValley(Entity):
             model = "mountainous_valley.obj", 
             texture = "level.png", 
             collider = "mesh",
+            scale = 3,
+            y = -200,
             **kwargs
         )
 
-        self.jumppad1 = JumpPad(player, jump_height = 80, position = (-7, 15, -49), level = self, rotation_y = -40, scale = 5, visible = False)
-        self.jumppad2 = JumpPad(player, jump_height = 80, position = (41, 22.5, -18), rotation_y = -20, scale = 5, level = self, visible = False)
-        self.jumppad3 = JumpPad(player, jump_height = 80, position = (-26, 67, 3), rotation_y = 40, scale = 4, level = self, visible = False)
-        self.jumppad4 = JumpPad(player, jump_height = 80, position = (-5, -12, 57), rotation_y = 20, scale = 5, level = self, visible = False)
-        self.jumppad5 = JumpPad(player, jump_height = 80, position = (56, -5.3, 2), rotation_y = 0, level = self, visible = False)
+        self.jumppad1 = JumpPad(player, jump_height = 100, position = (-6, 26, -44), level = self, rotation_y = -40, scale = 5, model = None)
+        self.jumppad2 = JumpPad(player, jump_height = 100, position = (-89, 2, 45), rotation_y = -20, scale = 5, level = self, model = None)
+        self.jumppad3 = JumpPad(player, jump_height = 100, position = (58, 39, -1), rotation_y = 40, scale = 4, level = self, model = None)
+        self.jumppad4 = JumpPad(player, jump_height = 100, position = (81, -5, 29), rotation_y = 20, scale = 5, level = self, model = None)
+        self.jumppad5 = JumpPad(player, jump_height = 100, position = (-49, 115, 27), rotation_y = 0, level = self, model = None)
+        self.jumppad6 = JumpPad(player, jump_height = 100, position = (-13, -19, 121), rotation_y = 0, level = self, model = None)
 
         self.player = player
 
     def update(self):
-        if self.player.y <= -51:
-            self.player.position = (-5, 105, -10)
+        if self.player.y <= -90:
+            self.player.position = (-5, 200, -10)
             self.player.rotation_y = -270
             self.player.velocity_x = 0
             self.player.velocity_y = 0
@@ -50,9 +53,9 @@ class MountainousValley(Entity):
             self.player.healthbar.value = self.player.health
 
 class JumpPad(Entity):
-    def __init__(self, player, jump_height = 100, position = (0, 0, 0), level = None, scale = 6, **kwargs):
+    def __init__(self, player, jump_height = 100, model = "jumppad.obj", position = (0, 0, 0), level = None, scale = 6, **kwargs):
         super().__init__(
-            model = "jumppad.obj",
+            model = model,
             texture = "level",
             position = position,
             scale = scale,
@@ -62,6 +65,9 @@ class JumpPad(Entity):
         self.player = player
         self.jump_height = jump_height
         self.level = level
+
+        if not self.show:
+            self.visible = False
 
     def update(self):
         if self.visible and distance(self, self.player) < 10:

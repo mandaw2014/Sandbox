@@ -14,11 +14,13 @@ Text.default_font = "./assets/Roboto.ttf"
 Text.default_resolution = Text.size * 1080
 
 app = Ursina()
-window.borderless = False
 window.fullscreen = True
+window.borderless = False
 window.cog_button.disable()
 window.fps_counter.disable()
 window.exit_button.disable()
+
+scene.fog_density = 0.001
 
 # Starting new thread for assets
 def load_assets():
@@ -65,14 +67,13 @@ for enemy in range(10):
 
 mainmenu = MainMenu(player, floating_islands, deserted_sands, mountainous_valley)
 
-# Lighting + shadows
 scene_lighting = SceneLighting(ursina = app, player = player, sun_direction = (-0.7, -0.9, 0.5), shadow_resolution = 4096, sky_texture = "sky")
 
 def input(key):
     if key == "g":
         player.reset()
 
-# def update():
-#     print(player.position)
+def update():
+    print(player.position)
 
 app.run()

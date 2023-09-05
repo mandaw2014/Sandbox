@@ -170,7 +170,7 @@ class MainMenu(Entity):
                         map.disable()
                     self.mountainous_valley.enable()
                     self.player.map = self.mountainous_valley
-                    self.player.position = (-5, 105, -10)
+                    self.player.position = (-5, 200, -10)
                     self.start() 
 
             # End Screen
