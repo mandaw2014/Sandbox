@@ -58,8 +58,8 @@ class MainMenu(Entity):
         invoke(setattr, self.start_button, "color", colourH, delay = 0.5)
 
         # Endscreen
-        retry_text = Text("Retry", scale = 4, line_height = 2, x = 0, origin = 0, y = 0.1, z = -100, parent = self.end_screen)
-        press_enter = Text("Press Enter", scale = 2, line_height = 2, x = 0, origin = 0, y = 0, z = -100, parent = self.end_screen)
+        retry_text = Text("Retry", scale = 4, origin = (0, 0.5), x = 0, y = 0.1, z = -100, parent = self.end_screen)
+        press_enter = Text("Press Enter", scale = 2, origin = (0, 0.5), x = 0, y = 0, z = -100, parent = self.end_screen)
         self.highscore_text = Text(text = str(self.player.highscore), origin = (0, 0), size = 0.05, scale = (0.8, 0.8), position = window.top - (0, 0.1), parent = self.end_screen, z = -100)
         camera.overlay.parent = self.end_screen
         camera.overlay.color = color.rgba(220, 0, 0, 100)

@@ -22,6 +22,9 @@ class DesertedSands(Entity):
             **kwargs
         )
 
+        self.jumppad1 = JumpPad(player, jump_height = 80, position = (2, -24, 0), level = self, rotation_y = -40, scale = 5, model = None)
+        self.jumppad2 = JumpPad(player, jump_height = 80, position = (0, 45, 3), level = self, rotation_y = -40, scale = 5, model = None)
+
 class MountainousValley(Entity):
     def __init__(self, player, **kwargs):
         super().__init__(

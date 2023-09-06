@@ -335,7 +335,10 @@ class Player(Entity):
                 self.animate_text(self.score_text, 1.8, 1)
 
     def reset(self):
-        self.position = (-60, 15, -16)
+        if self.map == self.maps[0] or self.map == self.maps[1]:
+            self.position = (-60, 15, -16)
+        elif self.map == self.maps[2]:
+            self.position = (-5, 200, -10)
         self.rotation = (0, -270, 0)
         self.velocity_x = 0
         self.velocity_y = 0

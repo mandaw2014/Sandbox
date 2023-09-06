@@ -17,6 +17,8 @@ app = Ursina()
 window.fullscreen = True
 window.borderless = False
 window.cog_button.disable()
+window.collider_counter.disable()
+window.entity_counter.disable()
 window.fps_counter.disable()
 window.exit_button.disable()
 
@@ -67,13 +69,14 @@ for enemy in range(10):
 
 mainmenu = MainMenu(player, floating_islands, deserted_sands, mountainous_valley)
 
+# Lighting + Shadows
 scene_lighting = SceneLighting(ursina = app, player = player, sun_direction = (-0.7, -0.9, 0.5), shadow_resolution = 4096, sky_texture = "sky")
 
 def input(key):
     if key == "g":
         player.reset()
 
-def update():
-    print(player.position)
+# def update():
+#     print(player.position)
 
 app.run()
